@@ -4,6 +4,6 @@ contact = "jm074@hdm-stuttgart.de",
 api_keys = dict(
     DISCOGS_KEY="PLTDiUyPLYpIxXmReZUzAqyoLAoopJOEnBjNfijI",
     ECHONEST_KEY="PI4C2RXRZDA84VBPN",
-    LASTFM_KEY="57ee3318536b23ee81d6b27e36997cde" # TODO: get own key when last.fm fixed their signup
+    LASTFM_KEY="33c521f37d3d582a15482e8fa72e1b5f"
 
 )
