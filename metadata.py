@@ -15,15 +15,37 @@ import numpy as np
 MUSICBRAINZ_LIMIT = 25
 LASTFM_TAG_WEIGHT_BORDER = 85
 ECHONEST_TAG_WEIGHT_BORDER = .85
+MUSICBRAINZ_TAG_BORDER = 0
 
+musicbrainzngs.set_useragent(config.name, config.version, config.contact)
+discogs = discogs_client.Client('{0}/{1}'.format(config.name, config.version),
+                                    user_token=config.api_keys['DISCOGS_KEY'])
 
-def getMusicbrainzTrackMetadata(recording_list):
-    pass  # TODO
+def getMusicbrainzTrackMetadata(recording_list, exists_remix):
+    track_md = {}
+    length = []
+    tags = set()
+    for track in recording_list:
+        if 'id' in track_md:
+            track_md['musicbrainz_id'] = track['id']
+        if 'length' in track:
+            length.append(int(track['length']))
+        if 'tag-list' in track:
+            for tag in track['tag-list']:
+                if tag['count'] > MUSICBRAINZ_TAG_BORDER:
+                    tags.add(tag['name'])
+
+    track_md['length'] = np.mean(length) if len(length) > 0 else None
+    track_md['tags'] = list(tags)
+    track_md['exists_remix'] = exists_remix
+
+    return track_md
 
 
 def getMusicbrainzArtistMetadata(artist):
     artist_md = {}
-    keys = ['country', 'area', 'gender', 'type', 'life-span']
+    keys = ['country', 'area', 'gender', 'type', 'life-span', 'rating', 'recording-count', 'release-count',
+            'work-count', 'tag-list']
     for key in keys:
         if key in artist:
             if key == 'area':
@@ -37,11 +59,41 @@ def getMusicbrainzArtistMetadata(artist):
                                                        end=artist[key]['end'])
                 else:
                     artist_md[key] = utils.getActivity(start=artist[key]['begin'])
+            elif key == 'tag-list':
+                tags = set()
+                for tag in artist[key]:
+                    if tag['count'] > MUSICBRAINZ_TAG_BORDER:
+                        tags.add(tag['name'])
+                artist_md['tags'] = list(tags)
             else:
                 artist_md[key] = artist[key]
         else:
             artist_md[key] = None
-    # TODO: tag-list
+
+    language = {'de': 0, 'en': 0}
+    labels = {}
+    releases = musicbrainzngs.browse_releases(artist['id'], includes=['labels'], limit=50)
+    for release in releases['release-list']:
+        if 'text-representation' in release:
+            if release['text-representation']['language'] == 'eng':
+                language['en'] += 1
+            elif release['text-representation']['language'] == 'deu':
+                language['de'] += 1
+        if 'label-info-list' in release:
+            for label in release['label-info-list']:
+                if 'label-code' not in label['label']:
+                    label['label']['label-code'] = None
+                if label['label']['label-code'] not in labels:
+                    labels[label['label']['label-code']] = {'name': label['label']['name'], 'count': 0}
+                else:
+                    labels[label['label']['label-code']][
+                        'count'] += 1  # TODO: check names w/ same ids (e.g. aftermath records <=> interscope)
+    language['de'] = language['de'] / len(releases['release-list'])
+    language['en'] = language['en'] / len(releases['release-list'])
+
+    artist_md['language'] = language
+    artist_md['labels'] = labels
+
     return artist_md
 
 
@@ -49,22 +101,24 @@ def getMusicbrainzMetadata(tracklist):
     results = []
     artist_md = None
     artist_id = None
-    recording_list = []
-    next = True
+    possible_tracks = []
+    exists_remix = True
     offset = 0
-    musicbrainzngs.set_useragent(config.name, config.version, config.contact)
     # try:
     for track in tracklist:
-        song_md = {'length': [], 'labels': set()}
         recordings = musicbrainzngs.search_recordings(track[1] + " AND artist:\\" + track[0],
                                                       limit=MUSICBRAINZ_LIMIT,
                                                       offset=offset * MUSICBRAINZ_LIMIT)
         for recording in recordings["recording-list"]:
             for artist_credit in recording['artist-credit']:
-                if 'artist' in artist_credit and artist_credit['artist']['name'] == track[0]:
-                    recording_list.append(recording)
-                    artist_id = artist_credit['artist']['id']
-        track_md = getMusicbrainzTrackMetadata(recording_list)
+                if 'artist' in artist_credit:
+                    if artist_credit['artist']['name'] == track[0]:
+                        if utils.checkTrackNamingConvention(recording['title'], track[1]):
+                            possible_tracks.append(recording)
+                            artist_id = artist_credit['artist']['id']
+                    if utils.isTrackRemixByName(recording['title']):
+                        exists_remix = True
+        track_md = getMusicbrainzTrackMetadata(possible_tracks, exists_remix)
         if artist_id is None:
             choice = False
             artists = musicbrainzngs.search_artists(track[0])
@@ -96,7 +150,12 @@ def getMusicbrainzMetadata(tracklist):
                     artist_md = getMusicbrainzArtistMetadata(artists)
                     break
         else:
-            artist_md = getMusicbrainzArtistMetadata(musicbrainzngs.get_artist_by_id(artist_id)['artist'])
+            artist_md = getMusicbrainzArtistMetadata(musicbrainzngs.get_artist_by_id(artist_id,
+                                                                                     ['recordings', 'releases',
+                                                                                      'release-groups', 'works',
+                                                                                      'aliases', 'artist-rels',
+                                                                                      'label-rels', 'tags', 'ratings'])[
+                                                         'artist'])
 
         results.append({'artist_md': artist_md, 'track_md': track_md})
 
@@ -112,7 +171,7 @@ def getDiscogsTrackMetadata(release):
     track_md['discogs_id'] = release.id
     track_md['genres'] = release.genres
     track_md['role'] = release.data['role']
-    track_md['styles'] = release.data['styles']
+    track_md['styles'] = release.data['styles'] if 'styles' in release.data else None
     track_md['exists_remix'] = False
 
     duration = 0
@@ -152,8 +211,7 @@ def getDiscogsMetadata(tracklist):
     artist_md = None
     artist_id = None
     break_ = False
-    discogs = discogs_client.Client('{0}/{1}'.format(config.name, config.version),
-                                    user_token=config.api_keys['DISCOGS_KEY'])
+
     for track in tracklist:
         # recordings = discogs.search(track[1], type='release')
         # for recording in recordings:
@@ -181,8 +239,6 @@ def getDiscogsMetadata(tracklist):
                     for release in artist.releases:
                         if release.title == track[1]:
                             track_md = getDiscogsTrackMetadata(release)
-                            print artist_md
-                            print track_md
                             break
         results.append({'artist_md': artist_md, 'track_md': track_md})
     return results
@@ -371,9 +427,8 @@ def getSpotifyMetadata(tracklist):
                 '''
                 Spotify may return different versions of the same song, e.g. a Radio Edit, or the same song released on another label
                 '''
-                if artist['name'] == track[0] and (
-                                recording['name'] == track[1] or utils.checkTrackNamingConvention(recording['name'],
-                                                                                                  track[1])):
+                if artist['name'] == track[0] and (utils.checkTrackNamingConvention(recording['name'],
+                                                                                    track[1])):
                     artist_id = artist['id']
                     possible_tracks.append(recording)
         track_md = getSpotifyTrackMetadata(possible_tracks)

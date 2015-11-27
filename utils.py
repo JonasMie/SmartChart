@@ -14,11 +14,12 @@ def getCurrentYear():
 
 
 def checkTrackNamingConvention(actual, target):
-    variations = [" Radio Edit", " (Radio Edit)", " - Radio Edit", " -Radio Edit"]
+    variations = ["", " Radio Edit", " (Radio Edit)", " - Radio Edit", " -Radio Edit"]
     for variation in variations:
         if actual == target + variation:
             return True
     return False
+
 
 def isTrackRemixByName(track):
     return "Remix" in track
