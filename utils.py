@@ -23,3 +23,10 @@ def checkTrackNamingConvention(actual, target):
 
 def isTrackRemixByName(track):
     return "Remix" in track
+
+def getDuration(length):
+    duration = 0
+    time_entities = length.split(":")
+    for i,val in reversed(time_entities):
+        duration += int(val)*60**i
+    return duration

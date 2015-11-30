@@ -1,11 +1,11 @@
 # coding=utf-8
+import json
+
+import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import re
-from metadata import getMetadata
-from unidecode import unidecode
-import numpy as np
-import json
+
+from metadata import request_metadata
 
 CAT1 = 1
 CAT2 = 2
@@ -133,8 +133,10 @@ def getPeakPosition(tracklist, Featurings=True):
 
 
 if __name__ == "__main__":
-    track = raw_input("Which song to analyse?: ")
-    artist = raw_input("Song is by which artist?: ")
-
-    print json.dumps(getPeakPosition([[artist, track]]), indent=4)
-    print json.dumps(getMetadata([[artist, track]]), indent=4)
+    #    track = raw_input("Which song to analyse?: ")
+    #   artist = raw_input("Song is by which artist?: ")
+    track = "Lose Yourself"
+    artist = "Eminem"
+    #print json.dumps(getPeakPosition([[artist, track]]), indent=4)
+    #print json.dumps(
+    print request_metadata.getMetadata([[artist, track], ["Oliver Koletzki", "After All"]])
