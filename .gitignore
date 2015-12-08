@@ -1,3 +1,6 @@
 *.pyc
 SmartChart.egg-info
 dist
+.idea/
+marsyas/
+test/
