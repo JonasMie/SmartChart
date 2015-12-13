@@ -1,5 +1,7 @@
 # coding=utf-8
+import os
 import re
+import time
 
 import discogs_client
 import musicbrainzngs
@@ -21,9 +23,12 @@ artist_md = None
 
 MUSICBRAINZ_LIMIT = 25
 MUSICBRAINZ_TAG_BORDER = 0
-DISCOGS_RELEASES_LIMIT = 25
+DISCOGS_RELEASES_LIMIT = 10  # more would be better, but
 LASTFM_TAG_WEIGHT_BORDER = 85
 ECHONEST_TAG_WEIGHT_BORDER = .85
+MAX_TRIES = 1
+TRY_AGAIN_AFTER = 300
+tries = 0
 
 musicbrainzngs.set_useragent(config.name, config.version, config.contact)
 discogs = discogs_client.Client('{0}/{1}'.format(config.name, config.version),
@@ -56,7 +61,7 @@ def getMusicbrainzArtistMetadata(artist):
         artist_md.country = artist['country']
     else:
         pass  # TODO: get country
-    if 'iso-3166-1-code-list' in artist['area']:
+    if 'area' in artist and 'iso-3166-1-code-list' in artist['area']:
         artist_md.area = artist['area']['iso-3166-1-code-list']
     else:
         pass  # TODO: get country
@@ -71,11 +76,12 @@ def getMusicbrainzArtistMetadata(artist):
             artist_type = -1
         artist_md.addType(artist_type)
 
-    if 'end' in artist['life-span']:
-        artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'],
-                                                end=artist['life-span']['end'])
-    else:
-        artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'])
+    if 'life-span' in artist:
+        if 'end' in artist['life-span']:
+            artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'],
+                                                    end=artist['life-span']['end'])
+        else:
+            artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'])
 
     '''
     musicbrainz uses a rating based on 5 (0 = bad, 5= good) but I want a float between 0 and 100
@@ -101,14 +107,17 @@ def getMusicbrainzArtistMetadata(artist):
 
 
 def getMusicbrainzMetadata(track):
+    global tries
     artist_id = None
     possible_tracks = []
     exists_remix = True
     offset = 0
     try:
-        recordings = musicbrainzngs.search_recordings(track[1] + " AND artist:\\" + track[0],
-                                                      limit=MUSICBRAINZ_LIMIT,
-                                                      offset=offset * MUSICBRAINZ_LIMIT)
+        recordings = musicbrainzngs.search_recordings(
+                "{} AND artist:\\{}".format(track[1].replace("(", "\(").replace(")", "\)"), track[0]),
+                # TODO: escape chars
+                limit=MUSICBRAINZ_LIMIT,
+                offset=offset * MUSICBRAINZ_LIMIT)
         for recording in recordings["recording-list"]:
             for artist_credit in recording['artist-credit']:
                 if 'artist' in artist_credit:
@@ -121,33 +130,51 @@ def getMusicbrainzMetadata(track):
         getMusicbrainzTrackMetadata(possible_tracks, exists_remix)
         if artist_id is None:
             choice = False
-            artists = musicbrainzngs.search_artists(track[0])
+            artists = musicbrainzngs.search_artists(track[0],
+                                                    ("artist", "begin", "end", "country", "ended", "gender",
+                                                     "tag", "type", "area", "beginarea", "endarea"))
             for (i, artist) in enumerate(artists['artist-list']):
                 '''
                 resolve any disambiguations
                 if the current artist has the same name as the next artist in the list, then let the user choose the right one
                 '''
                 if len(artists['artist-list']) - 1 > i and unidecode(artist['name']) == unidecode(
-                        artists['artist-list'][i + 1]['name']) == \
-                        track[0]:
+                        artists['artist-list'][i + 1]['name']) == track[0]:
                     choice = True
                     if i == 0:
                         print "Sorry, the artist '{0}' is ambigious, please chose the right one:\n[{1}] None of the options".format(
-                            artist['name'], i)
-                    print u"[{0}] {1}: {2}".format(i + 1, artist['name'], artist['disambiguation'])
+                                artist['name'], i)
+                    print u"[{0}] {1}: {2}".format(i + 1, artist['name'],
+                                                   artist[
+                                                       'disambiguation'] if 'disambiguation' in artist else "no description")
                 elif choice:
-                    print u"[{0}] {1}: {2}".format(i + 1, artist['name'], artist['disambiguation'])
+                    print u"[{0}] {1}: {2}".format(i + 1, artist['name'], artist[
+                        'disambiguation'] if 'disambiguation' in artist else "no description")
                     input = raw_input("Your choice: ")
                     try:
                         artist_int = int(input)
                         if artist_int == 0:
                             pass  # TODO: no artist fits
-                        artist_md = getMusicbrainzArtistMetadata(artists['artist-list'][artist_int - 1])
+                        # FIXME: why does musicbrainzngs.search_artist() not provide this information? => double request necessary
+                        # getMusicbrainzArtistMetadata(artists['artist-list'][artist_int - 1])
+                        getMusicbrainzArtistMetadata(
+                                musicbrainzngs.get_artist_by_id(artists['artist-list'][artist_int - 1]['id'],
+                                                                ['recordings', 'releases',
+                                                                 'release-groups', 'works',
+                                                                 'aliases', 'artist-rels',
+                                                                 'label-rels', 'tags', 'ratings'])[
+                                    'artist'])
                     except ValueError:
                         pass  # TODO
                     break
                 elif unidecode(artist['name']) == track[0]:
-                    artist_md = getMusicbrainzArtistMetadata(artists)
+                    # FIXME: why does musicbrainzngs.search_artist() not provide this information? => double request necessary
+                    getMusicbrainzArtistMetadata(musicbrainzngs.get_artist_by_id(artist['id'],
+                                                                                 ['recordings', 'releases',
+                                                                                  'release-groups', 'works',
+                                                                                  'aliases', 'artist-rels',
+                                                                                  'label-rels', 'tags', 'ratings'])[
+                                                     'artist'])
                     break
         else:
             getMusicbrainzArtistMetadata(musicbrainzngs.get_artist_by_id(artist_id,
@@ -157,7 +184,8 @@ def getMusicbrainzMetadata(track):
                                                                           'label-rels', 'tags', 'ratings'])[
                                              'artist'])
     except musicbrainzngs.NetworkError:
-        print "The Musicbrainz service seems to be not available right now..."
+        tries += 1
+        print "| The Musicbrainz service seems to be not available right now..."
 
 
 def getDiscogsTrackMetadata(release):
@@ -196,12 +224,12 @@ def getDiscogsArtistMetadata(artist):
     release_count = 0
     artist_md.discogs_id = artist.id
 
-    artist_md.addType(1 if len(artist.members) > 0 else 0)
+    # try:
+    artist_md.addType(1 if len(artist.members) > 1 else 0)
     artist_md.buffer['recording_count'].append(artist.releases.count)
     for group in artist.groups:  # TODO
         artist_md.addGroup(group)
     for release in artist.releases:
-
         for genre in release.genres:
             artist_md.addGenre(genre)
         if 'labels' in release.data:
@@ -216,6 +244,7 @@ def getDiscogsArtistMetadata(artist):
         release_count += 1
         if release_count >= DISCOGS_RELEASES_LIMIT:
             break
+            # except
 
 
 def getDiscogsMetadata(track):
@@ -236,6 +265,7 @@ def getDiscogsMetadata(track):
                     if release.title == track[1]:  # TODO: check release types!!
                         getDiscogsTrackMetadata(release)
                         break
+                break
 
 
 def getEchonestTrackMetadata(tracks):
@@ -373,29 +403,45 @@ def getSpotifyMetadata(track):
         getSpotifyArtistMetadata(spotify.artist(artist_id))
 
 
-def getMetadata(tracklist):
-    global track_md, artist_md
+def getMetadata(fileList):
+    global track_md, artist_md, tries
     tracks = []
     artists = []
-    for track in tracklist:
-        print "---------- Colltecting data for {0} by {1} ----------\n|".format(track[1], track[0])
-        track_md = TrackMetadata()
-        artist_md = ArtistMetadata()
+    last_request = 0
+    for artistTuple in fileList:
+        artistName = artistTuple[0]
+        for trackTuple in artistTuple[1]:
+            track = [artistName, trackTuple[1]]
+            print track
+            print "---------- Colltecting data for {0} by {1} ----------\n|".format(track[1], artistName)
+            track_md = TrackMetadata()
+            artist_md = ArtistMetadata()
 
-        print "| Collecting data from Musicbrainz..."
-        getMusicbrainzMetadata(track)
-        print "| Collecting data from Discogs..."
-        getDiscogsMetadata(track)
-        print "| Collecting data from Echonest..."
-        getEchonestMetadata(track)
-        print "| Collecting data from Last.FM..."
-        getLastfmMetadata(track)
-        print "| Collecting data from Spotify..."
-        getSpotifyMetadata(track)
+            print "| Collecting data from Musicbrainz..."
+            if MAX_TRIES > tries or time.time() - last_request > TRY_AGAIN_AFTER:
+                last_request = time.time()
+                tries -= 1
+                getMusicbrainzMetadata(track)
+            else:
+                print "|    The Musicbrainz-service was not reachable the last {} tries. Try again in {} seconds".format(
+                        MAX_TRIES, int(TRY_AGAIN_AFTER - (time.time() - last_request)))
+            print "| Collecting data from Discogs..."
+            getDiscogsMetadata(track)
+            print "| Collecting data from Echonest..."
+            getEchonestMetadata(track)
+            print "| Collecting data from Last.FM..."
+            getLastfmMetadata(track)
+            print "| Collecting data from Spotify..."
+            getSpotifyMetadata(track)
 
-        print "|"
-        tracks.append(track_md.getData())
-        artists.append(artist_md.getData())
+            print "|"
+            tracks.append(track_md.getData())
+            artists.append(artist_md.getData())
     print "-------------------------------------------------------"
 
-    return pd.DataFrame(artists), pd.DataFrame(tracks)
+    artist_df = pd.DataFrame(artists)
+    track_df = pd.DataFrame(tracks)
+
+    artist_df.to_csv(os.path.join('features', 'meta_artist.csv'))
+    track_df.to_csv(os.path.join('features', 'meta_track.csv'))
+    return artist_df, track_df
