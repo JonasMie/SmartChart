@@ -1,9 +1,13 @@
 # coding=utf-8
+import tkFileDialog
+from os import listdir
+from os.path import *
 
 import requests
 from bs4 import BeautifulSoup
 
 from MIR.mir import *
+from metadata.request_metadata import getMetadata
 
 CAT1 = 1
 CAT2 = 2
@@ -130,7 +134,48 @@ def getPeakPosition(tracklist, Featurings=True):
     # return None
 
 
+def parseDirectory(directoryName, extensions):
+    '''
+    Taken from: 'facerecognitionTemplate' (DataMining)
+    This method returns a list of all filenames in the Directory directoryName.
+    For each file the complete absolute path is given in a normalized manner (with
+    double backslashes). Moreover only files with the specified extension are returned in
+    the list.
+    '''
+    if not isdir(directoryName): return
+
+    folders = list()
+
+    files_found = 0
+    artists_found = 0
+
+    for subFolderName in listdir(directoryName):
+        artists_found += 1
+        subFolderFiles = list()
+        for root, directories, filenames in os.walk(os.path.join(directoryName, subFolderName)):
+            for filename in filenames:
+                files_found += 1
+                subFolderFiles.append(
+                        (os.path.join(root, filename).encode('utf-8'), filename.rsplit(".", 1)[0].encode('utf-8')))
+        folders.append((subFolderName.encode('utf-8'), subFolderFiles))
+
+    return folders, artists_found, files_found
+
+
+def usage():
+    print "Available options:"
+    print "\tinput:string (input file .wav)"
+    print "\touput:string (output file .png)"
+    print "\tmethod:string (valid methods: correlogram, spectrogram, amdfogram)"
+    print "\tplot_title:string"
+    print "\twin_size:int"
+
+
 if __name__ == "__main__":
-    #    track = raw_input("Which song to analyse?: ")
-    #   artist = raw_input("Song is by which artist?: ")
-    run()
+    # Choose Directory which contains all training files
+    dir = tkFileDialog.askdirectory(title="Choose Directory of training images")
+    fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3", "wav"))
+
+    print "Found {} files ({} artists)".format(tracks_found, artists_found)
+
+    getMetadata(fileList[8:10])
