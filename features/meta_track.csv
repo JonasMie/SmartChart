@@ -1,0 +1,34 @@
+artist_name,available_markets,available_on_spotify_in_ger,discogs_id,echonest_id,exists_remix,genre_country,genre_electronic,genre_hiphop,genre_jazz,genre_other,genre_pop,genre_rock,genre_soul,instrumentalness:,lastfm_id,length,musicbrainz_id,name,peakCategory,peakWeeks,speechiness,spotify_id,year
+a-ha,60.0,True,510508.0,SOAYRGU130516DFA11,True,False,False,False,False,False,False,True,False,0.001125,,280.8,a2d19523-6ac6-48be-aee2-5d51e0e721ea,Cold River,6,0,0.039292,,1990.0
+a-ha,32.4,True,1482033.0,SODIWQC1417BCF91F7,True,False,True,False,False,False,False,False,False,0.034294,,264.018252308,efbd838d-5189-41ad-a39b-848ba8be139c,Crying In The Rain,3,24,0.0373,,1991.0
+a-ha,28.0,True,226276.0,SORBVSL136A3E91514,True,False,True,False,False,False,False,False,False,0.001822,,255.405555417,86f8b4d0-def4-4d02-8253-05bc66ba5a70,Lifelines,4,6,0.040213,,2002.0
+a-ha,28.0,True,226276.0,,True,False,True,False,False,False,False,False,False,,,219.625,b5f11758-72b0-415e-8644-e6edfd474b39,You Wanted More,6,0,,,2002.0
+a-ha,28.0,True,429859.0,SOOBOHO1461E8A0780,True,False,False,False,False,False,False,True,False,9.2e-05,,246.845,823d934a-58d6-43fc-9712-97bcb45d7a39,Forever Not Yours,4,9,0.031715,,2002.0
+a-ha,28.0,True,,,True,,,,,,,,,,,261.833333333,0a7bd82f-b827-4bd5-a4e9-93920ad56c15,Theres A Reason For It,6,0,,,
+a-ha,28.0,True,414443.0,SOCXNOE12A8AE47E0F,True,False,False,False,False,False,False,True,False,0.0251135,,313.465,c58f6a87-5073-4179-b18b-3b8f0ec2b54c,Time And Again,6,0,0.030196,,2003.0
+a-ha,,False,473586.0,SOFAAAQ12A8AE47E18,True,False,True,False,False,False,False,False,False,0.2274485,,264.13,a76448fa-631a-4e33-bf19-d7cb6c51bd2b,Did Anyone Approach You,5,3,0.0377345,,2002.0
+a-ha,,False,226276.0,,True,False,True,False,False,False,False,False,False,,,271.428571429,d795a746-ef7b-44fd-b055-0300167601a5,Afternoon High,6,0,,,2002.0
+a-ha,,False,7543133.0,SOTEIZH12A8A9D5E5E,True,False,False,False,False,False,False,True,False,0.000504,,260.690667,e8c9b348-d06c-4bf5-a98b-d899e1321438,Oranges On Appletrees,6,0,0.041898,,2002.0
+a-ha,28.0,True,226276.0,SONNIXL12A8AE47E28,True,False,True,False,False,False,False,False,False,0.001765,,250.536296667,9965e476-eec2-4432-9db3-ee652b304418,A Little Bit,6,0,0.034096,,2002.0
+a-ha,28.0,True,226276.0,SOKFPIF12A8AE47E2C,True,False,True,False,False,False,False,False,False,0.000473,,253.133333333,4851a880-2d41-4927-bb29-c69c592bffe0,Less Than Pure,6,0,0.026917,,2002.0
+a-ha,28.0,True,226276.0,SONXGIQ12A8AE47E34,True,False,True,False,False,False,False,False,False,6.1e-05,,254.2,6bed5fa3-9ac3-48d5-8f23-e81cbb4e453f,Turn The Lights Down,6,0,0.027057,,2002.0
+a-ha,28.0,True,226276.0,SOHKXAM12A8AE47E36,True,False,True,False,False,False,False,False,False,0.004992,,198.708147778,a2019c5c-303c-42bd-aaf0-e1731cd53583,Cannot Hide,6,0,0.028619,,2002.0
+a-ha,28.0,True,226276.0,SOHBWZS12A8AE47E39,True,False,True,False,False,False,False,False,False,0.0,,208.04,76d415aa-5eff-4bc2-9afa-38191903ad85,White Canvas,6,0,0.029655,,2002.0
+a-ha,28.0,True,414443.0,SOGGVYA12A8AE47E3B,True,False,False,False,False,False,False,True,False,0.002364,,205.111110833,5b4852d9-148b-4f1a-9ae5-da6b053be091,Dragonfly,6,0,0.031439,,2003.0
+a-ha,28.0,True,4662138.0,SOHTNDB12A8AE47E3E,True,False,True,False,False,False,False,False,False,3.1e-05,,260.863703333,89250e5b-6878-4aa8-af7d-6f2fe8f63161,Solace,6,0,0.023272,,2005.0
+a-ha,34.0,True,188819.0,SOVTIZC12A67ADE1C3,True,False,True,False,False,False,False,False,False,0.000428666666667,,278.894594516,39627fd4-ebc9-4b56-a865-b74709bc693a,Minor Earth Major Sky,5,9,0.0315746666667,,2000.0
+a-ha,34.0,True,188819.0,SOSKLWW12A67ADE1C4,True,False,True,False,False,False,False,False,False,0.112911,,266.496245556,89378d39-c37d-4d32-91b6-aad4dbd1687f,Little Black Heart,6,0,0.024042,,2000.0
+a-ha,34.0,True,2752739.0,SOIXTRQ1373F10B8CB,True,False,False,False,False,False,False,True,False,0.0,,264.506606667,df824b1c-2473-459d-99b3-f9f414a4ca4b,The Sun Never Shone That Day,6,0,0.0312425,,2000.0
+a-ha,34.0,True,188819.0,SOVCUFJ12A67ADE1C8,True,False,True,False,False,False,False,False,False,0.194712,,262.93333375,649dcf53-7d8c-438a-b811-fc6c64281b4e,To Let You Win,6,0,0.029321,,2000.0
+a-ha,34.0,True,2696635.0,SOLFVRE12A67ADE1C9,True,False,True,False,False,False,False,False,False,0.000943,,193.927554286,e8b3883a-7d16-4d69-9a6d-6d83e3b69c3d,The Company Man,6,0,0.031357,,0.0
+a-ha,34.0,True,188819.0,SOWTERW12A67ADE1CA,True,False,True,False,False,False,False,False,False,0.000113,,227.056296667,9569ab6f-d6a8-457d-b6cf-516ed9f5eb93,Thought That It Was You,6,0,0.036481,,2000.0
+a-ha,34.0,True,188819.0,SOHEVKT12A67ADE1CB,True,False,True,False,False,False,False,False,False,0.051679,,257.74,25b85218-1b46-4074-8141-83a78b1a89c2,I Wish I Cared,6,0,0.036874,,2000.0
+a-ha,34.0,True,188815.0,SOSGQKP12A8AE46AC8,True,False,True,False,False,False,False,False,False,2.1e-05,,233.345454545,e8b6b815-cacf-4b9e-891c-1ba74ba01b26,Barely Hanging On,6,0,0.031899,,2000.0
+a-ha,34.0,True,188819.0,SOHLFYA12A67ADE1CD,True,False,True,False,False,False,False,False,False,0.000173,,334.293333,4a1140f0-83d4-406d-bffa-bbe38a81c1bd,You'll Never Get Over Me,6,0,0.024877,,2000.0
+a-ha,34.0,True,188819.0,SOXYMKH12A67ADE1CE,True,False,True,False,False,False,False,False,False,0.078574,,282.72166625,673e5c60-9a78-47a5-939c-ac74dadf83e3,I Won't Forget Her,6,0,0.037212,,2000.0
+a-ha,34.0,True,188819.0,SOFZVAD12A67ADE1CF,True,False,True,False,False,False,False,False,False,0.000542,,299.566667,b82c70e4-9599-4ebd-853f-e471819ec0d3,Mary Ellen Makes The Moment Count,6,0,0.033603,,2000.0
+a-ha,34.0,True,2752739.0,SOIXTRQ1373F10B8CB,True,False,False,False,False,False,False,True,False,0.0,,272.383258333,df824b1c-2473-459d-99b3-f9f414a4ca4b,The Sun Never Shone That,6,0,0.0312425,,2000.0
+a-ha,56.6666666667,True,418925.0,,True,False,True,False,False,False,False,False,False,,,245.4375,4b1a20aa-20f0-47fe-a39d-5f4105074c06,Take On Me,1,20,,,1986.0
+a-ha,,False,,,True,,,,,,,,,,,,,Blue Skies,6,0,,,
+a-ha,55.2,True,1482033.0,SOCAYRP1512D756E69,True,False,True,False,False,False,False,False,False,0.0714833333333,,317.231412121,ba63dd54-4805-4c18-8dda-28a38cd36dd4,The Sun Always Shines On TV,2,16,0.0421423333333,,1991.0
+a-ha,17.5,True,108515.0,SOTEFWR1366F0EE198,True,False,True,False,False,False,False,False,False,0.000165,,254.075555455,b2c5d220-6116-4ec0-93c9-cf6ba883f3de,Velvet,4,9,0.025925,,2000.0

@@ -3,8 +3,9 @@ from MetadataBase import MetadataBase
 
 
 class ArtistMetadata(MetadataBase):
-    def __init__(self):
-        MetadataBase.__init__(self)
+    def __init__(self, name):
+        MetadataBase.__init__(self, name)
+
         self.musicbrainz_id = None
         self.discogs_id = None
         self.echonest_id = None
@@ -22,17 +23,15 @@ class ArtistMetadata(MetadataBase):
             'news': [],
             'years': []
         }
-        self.country = None
+        self.is_german = None
+        self.is_american = None
+        self.is_other_country = None
         self.area = None
-        self.gender = None
 
-        '''
-        artist_type ==
-         0: person
-         1: group
-        -1: orchestra, choir, character and everything else
-        '''
-        self.artist_type = None
+        self.is_male = None
+        self.is_female = None
+        self.is_group = None
+
         self.life_span = None
 
         self.recording_count = None
@@ -54,6 +53,11 @@ class ArtistMetadata(MetadataBase):
         self.last_year = None
 
         self.language = {'de': 0, 'en': 0, 'other': 0}
+
+        self.distChartPeak = None
+        self.totalChartWeeks = 0
+        self.meanChartWeeks = 0
+        self.meanChartPeak = 6
 
     def addLanguage(self, lang):
         if lang == 'eng':
@@ -88,14 +92,24 @@ class ArtistMetadata(MetadataBase):
                 self.total_years = self.last_year - self.first_year
             else:
                 self.total_years = utils.getCurrentYear() - self.first_year
-        MetadataBase.normalize(self)
+        return MetadataBase.normalize(self)
+
+    def addChartData(self, chartData):
+        self.distChartPeak = chartData['artist_md']['dist_chart_peak']
+        self.totalChartWeeks = chartData['artist_md']['total_chart_weeks']
+        self.meanChartWeeks = chartData['artist_md']['mean_chart_weeks']
+        self.meanChartPeak = chartData['artist_md']['mean_chart_peak']
 
     def getData(self):
         return {
-            'country': self.country,
+            'name': self.name,
+            'is_german': self.is_german,
+            'is_american': self.is_american,
+            'is_other_country': self.is_other_country,
             'area': self.area,
-            'gender': self.gender,
-            'artist_type': self.artist_type,
+            'is_male': self.is_male,
+            'is_female': self.is_female,
+            'is_group': self.is_group,
             'life_span': self.life_span,
             'recording_count': self.recording_count,
             'release_count': self.release_count,
@@ -106,5 +120,17 @@ class ArtistMetadata(MetadataBase):
             'popularity': self.popularity,
             'news': self.news,
             'total_years': self.total_years,
-            'breaking_years': self.breaking_years
+            'breaking_years': self.breaking_years,
+            'genre_electronic': self.genre_electronic,
+            'genre_pop': self.genre_pop,
+            'genre_hiphop': self.genre_hiphop,
+            'genre_rock': self.genre_rock,
+            'genre_soul': self.genre_soul,
+            'genre_jazz': self.genre_jazz,
+            'genre_country': self.genre_country,
+            'genre_other': self.genre_other,
+            # 'distChartPeak': self.distChartPeak,
+            'totalChartWeeks': self.totalChartWeeks,
+            'meanChartWeeks': self.meanChartWeeks,
+            'meanChartPeak': self.meanChartPeak
         }
