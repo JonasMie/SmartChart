@@ -1,6 +1,10 @@
 import datetime
+import difflib
+import re
 
 from dateutil import parser
+
+feat = re.compile(r"([\[(](?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", re.I)
 
 
 def getActivity(start, end=datetime.datetime.now(), format="%Y-%m-%d"):
@@ -16,10 +20,10 @@ def getCurrentYear():
     return datetime.datetime.now().year
 
 
-def checkTrackNamingConvention(actual, target):
+def checkTrackNamingConvention(actual, target, normalize=False):
     variations = ["", " Radio Edit", " (Radio Edit)", " - Radio Edit", " -Radio Edit"]
     for variation in variations:
-        if actual == target + variation:
+        if is_similar(actual, target + variation, normalize):
             return True
     return False
 
@@ -36,3 +40,14 @@ def getDuration(length):
         duration += int(val) * 60 ** i
         i += 1
     return duration
+
+
+def normalizeName(track):
+    return re.sub(r"([\[(](\s)*(?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", '', track).strip().lower()
+
+
+def is_similar(name1, name2, normalize=False, border=.9):
+    if normalize:
+        name1 = normalizeName(name1)
+        name2 = normalizeName(name2)
+    return difflib.SequenceMatcher(a=name1, b=name2).ratio() >= border
