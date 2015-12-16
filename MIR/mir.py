@@ -519,6 +519,3 @@ def run():
     # add_features = additional_features(file)
     features = marsyas_analyse(file).T
     features.to_csv(FEATURES_FILE, mode='a', index=False, header=None)
-
-
-0
