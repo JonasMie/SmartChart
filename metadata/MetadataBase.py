@@ -20,7 +20,8 @@ all_genres = {
         "hiphop", "eastcoasst", "gangstarap", "ghetto", "grime", "hippop", "rap", "black"
     ],
     "rock": [
-        "rock", "neuedeutschehärte", "ndh", "alternativerock", "grunge", "indierock", "industrial", "numetal", "garage",
+        "rock", "neuedeutschehaerte", "ndh", "alternativerock", "grunge", "indierock", "industrial", "numetal",
+        "garage",
         "heavymetal", "metal", "deathmetal", "poprock", "punk", "punkrock",
     ],
     "soul": [
@@ -46,6 +47,7 @@ all_genres = {
 class MetadataBase:
     def __init__(self, name):
         self.name = name
+        self.clean_name = None
         self.labels = {'labels': {}, 'parent_labels': {}}
         self.tags = {}
 
@@ -57,6 +59,8 @@ class MetadataBase:
         self.genre_jazz = None
         self.genre_country = None
         self.genre_other = None
+
+        self.error = False
 
         self.styles = {}
 

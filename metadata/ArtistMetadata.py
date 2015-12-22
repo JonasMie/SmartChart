@@ -44,7 +44,7 @@ class ArtistMetadata(MetadataBase):
         self.popularity = None
 
         self.news = None
-        self.groups = []  # todo
+        self.groups = []  # TODO
 
         self.years = None
         self.total_years = 0
@@ -103,6 +103,7 @@ class ArtistMetadata(MetadataBase):
     def getData(self):
         return {
             'name': self.name,
+            'clean_name': self.clean_name,
             'is_german': self.is_german,
             'is_american': self.is_american,
             'is_other_country': self.is_other_country,
@@ -132,5 +133,11 @@ class ArtistMetadata(MetadataBase):
             # 'distChartPeak': self.distChartPeak,
             'totalChartWeeks': self.totalChartWeeks,
             'meanChartWeeks': self.meanChartWeeks,
-            'meanChartPeak': self.meanChartPeak
+            'meanChartPeak': self.meanChartPeak,
+            'musicbrainz_id': self.musicbrainz_id,
+            'discogs_id': self.discogs_id,
+            'lastfm_id': self.lastfm_id,
+            'echonest_id': self.echonest_id,
+            'spotify_id': self.spotify_id,
+            'error': self.error
         }

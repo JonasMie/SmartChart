@@ -1,5 +1,5 @@
 # coding=utf-8
-import os
+
 import re
 import socket
 import time
@@ -7,7 +7,6 @@ import time
 import discogs_client
 import musicbrainzngs
 import numpy as np
-import pandas as pd
 import pyechonest.artist as echonest_artist
 import pyechonest.config as echonest_config
 import pyechonest.song as echonest_song
@@ -16,6 +15,7 @@ import requests
 import spotipy
 from bs4 import BeautifulSoup
 from unidecode import unidecode
+from termcolor import colored
 
 import config
 import utils
@@ -47,6 +47,7 @@ CAT3 = 3
 CAT4 = 4
 CAT5 = 5
 CAT6 = 6
+CAT7 = 7
 
 
 def getMusicbrainzTrackMetadata(recording_list, exists_remix):
@@ -62,7 +63,7 @@ def getMusicbrainzTrackMetadata(recording_list, exists_remix):
     '''
     Avoid the property 'exists_remix' to be set to False (if at least one remix exists, this is true, if other service do not find any remix, then there still exists one
     '''
-    if exists_remix is True:
+    if exists_remix:
         track_md.exists_remix = True
 
 
@@ -89,16 +90,18 @@ def getMusicbrainzArtistMetadata(artist):
     else:
         pass  # TODO: get country
     if 'type' in artist:
-        if artist['type'] is not "Person":
+        if artist['type'] != "Person":
             artist_md.is_group = True
             artist_md.is_male = False
             artist_md.is_female = False
+        else:
+            artist_md.is_group = False
     if 'gender' in artist:
-        if artist['gender'] == 'male':
+        if artist['gender'] == 'Male':
             artist_md.is_male = True
             artist_md.is_female = False
             artist_md.is_group = False
-        elif artist['gender'] == 'female':
+        elif artist['gender'] == 'Female':
             artist_md.is_male = False
             artist_md.is_female = True
             artist_md.is_group = False
@@ -124,7 +127,7 @@ def getMusicbrainzArtistMetadata(artist):
 
     releases = musicbrainzngs.browse_releases(artist['id'], includes=['labels'], limit=50)
     for release in releases['release-list']:
-        if 'text-representation' in release:
+        if 'text-representation' in release and 'language' in release['text-representation']:
             artist_md.addLanguage(release['text-representation']['language'])
         if 'label-info-list' in release:
             for label in release['label-info-list']:
@@ -140,7 +143,8 @@ def getMusicbrainzMetadata(track, search_artist=True):
     exists_remix = True
     offset = 0
     try:
-        recordings = musicbrainzngs.search_recordings(query=track[1], artistname=track[0],
+        recordings = musicbrainzngs.search_recordings(query=track[1].replace('/', ''),
+                                                      artistname=track[0].replace('/', ''),
                                                       limit=MUSICBRAINZ_LIMIT,
                                                       offset=offset * MUSICBRAINZ_LIMIT)
         for recording in recordings["recording-list"]:
@@ -148,19 +152,20 @@ def getMusicbrainzMetadata(track, search_artist=True):
                 if 'artist' in artist_credit and utils.is_similar(artist_credit['artist']['name'].lower(), track[0],
                                                                   normalize=True):
                     if utils.checkTrackNamingConvention(recording['title'].lower(), track[1]):
-                        for release in recording['release-list']:
-                            if 'status' in release:
-                                if release['status'] == 'Official':
-                                    possible_tracks.append(recording)
-                                    if artist_id is None:
-                                        artist_id = artist_credit['artist']['id']
-                                elif release['status'] == 'Bootleg':
-                                    exists_remix = True
-                            else:
-                                if utils.isTrackRemixByName(recording['title']):
-                                    exists_remix = True
+                        if 'release-list' in recording:
+                            for release in recording['release-list']:
+                                if 'status' in release:
+                                    if release['status'] == 'Official':
+                                        possible_tracks.append(recording)
+                                        if artist_id is None:
+                                            artist_id = artist_credit['artist']['id']
+                                    elif release['status'] == 'Bootleg':
+                                        exists_remix = True
                                 else:
-                                    possible_tracks.append(recording)
+                                    if utils.isTrackRemixByName(recording['title']):
+                                        exists_remix = True
+                                    else:
+                                        possible_tracks.append(recording)
         getMusicbrainzTrackMetadata(possible_tracks, exists_remix)
         if search_artist:
             if artist_id is None:
@@ -202,7 +207,7 @@ def getMusicbrainzMetadata(track, search_artist=True):
                         except ValueError:
                             pass  # TODO
                         break
-                    elif utils.is_similar(unidecode(artist['name']), track[0]):
+                    elif utils.is_similar(unidecode(artist['name']), track[0], normalize=True):
                         # FIXME: why does musicbrainzngs.search_artist() not provide this information? => double request necessary
                         getMusicbrainzArtistMetadata(musicbrainzngs.get_artist_by_id(artist['id'],
                                                                                      ['recordings', 'releases',
@@ -220,7 +225,8 @@ def getMusicbrainzMetadata(track, search_artist=True):
                                                  'artist'])
     except musicbrainzngs.NetworkError:
         tries += 1
-        print "| The Musicbrainz service seems to be not available right now..."
+        track_md.error = True
+        print colored("| The Musicbrainz service seems to be not available right now...", 'red')
 
 
 def getDiscogsTrackMetadata(release, track):
@@ -246,10 +252,15 @@ def getDiscogsTrackMetadata(release, track):
 def getDiscogsArtistMetadata(artist):
     release_count = 0
     artist_md.discogs_id = artist.id
-    artist_md.is_group = True if len(artist.members) > 1 else False
-    artist_md.buffer['recording_count'].append(artist.releases.count)  # TODO: check recording/release/work
+    if len(artist.members) > 1:
+        artist_md.is_group = True
+        artist_md.is_male = False
+        artist_md.is_female = False
+    else:
+        artist_md.is_group = False
+    # artist_md.buffer['release_count'].append(artist.releases.count)  # TODO: check recording/release/work
     for release in artist.releases:
-        if artist_md.genre_other is None or artist_md.genre_other is True:
+        if artist_md.genre_other is None or artist_md.genre_other:
             artist_md.addGenres(release.genres)
         if 'labels' in release.data:
             for label in release.labels:
@@ -271,27 +282,40 @@ def getDiscogsMetadata(track, search_artist=True):
     # TODO: discogs offers a really really REALLY weird search functionality. You never get what you expect to get (if you get anything at all...)
     # The best, most performant and according to discogs 'correct' way to query the data is the call above this comment, but... well, it does not work, so I try to get the best results with
     # this call:
+    try:
+        releases = discogs.search("{0}+{1}".format(track[0], track[1]), type="release")
+        processed_artist = False
+        for release in releases:
+            '''
+            problem: For artists with the same name discogs generates a suffix with the index, e.g. '# TODO: discogs offers a really really REALLY weird search functionality. You never get what you expect to get (if you get anything at all...) Adele', 'Adele (2)', 'Adele (3)',...
+            and they don't provide the normal name of the artist in the artist-object.
+            The solution is to filter out the suffix using regular expression in order to compare the name from the artist-object with the
+            given track artist
+            '''
+            for artist in release.artists:
+                name = re.search("^(.*?)(\s\(\d\))?$", artist.name)
+                if name:
+                    if utils.is_similar(name.group(1).lower(), track[0]):
+                        if search_artist and not processed_artist:
+                            getDiscogsArtistMetadata(artist)
+                            processed_artist = True
+                        for track_obj in release.data['tracklist']:
+                            if utils.is_similar(track_obj['title'], track[1], normalize=True):
+                                getDiscogsTrackMetadata(release, track_obj)
+                                return
 
-    releases = discogs.search("{0}+{1}".format(track[0], track[1]), type="release")
-    processed_artist = False
-    for release in releases:
-        '''
-        problem: For artists with the same name discogs generates a suffix with the index, e.g. '# TODO: discogs offers a really really REALLY weird search functionality. You never get what you expect to get (if you get anything at all...) Adele', 'Adele (2)', 'Adele (3)',...
-        and they don't provide the normal name of the artist in the artist-object.
-        The solution is to filter out the suffix using regular expression in order to compare the name from the artist-object with the
-        given track artist
-        '''
-        for artist in release.artists:
-            name = re.search("^(.*?)(\s\(\d\))?$", artist.name)
-            if name:
-                if utils.is_similar(name.group(1).lower(), track[0]):
-                    if search_artist and not processed_artist:
-                        getDiscogsArtistMetadata(artist)
-                        processed_artist = True
-                    for track_obj in release.data['tracklist']:
-                        if utils.is_similar(track_obj['title'], track[1], normalize=True):
-                            getDiscogsTrackMetadata(release, track_obj)
-                            return
+        if not processed_artist:
+            artists = discogs.search(track[0], type="artist")
+            for artist in artists:
+                if utils.is_similar(artist.name.lower(), track[0]):
+                    getDiscogsArtistMetadata(artist)
+                    break
+    except requests.exceptions.SSLError:
+        track_md.error = True
+        print colored("| SSL error...", 'red')
+    except discogs_client.exceptions.HTTPError:
+        track_md.error = True
+        print colored("| Internal discogs-server error...", 'red')
 
 
 def getEchonestTrackMetadata(tracks):
@@ -299,22 +323,16 @@ def getEchonestTrackMetadata(tracks):
         if track_md.echonest_id is None:
             track_md.echonest_id = track.id
 
-        # if hasattr(track, 'duration'):
         track_md.buffer['length'].append(track.audio_summary['duration'])
-        # if hasattr(track, 'instrumentalness'):
         track_md.buffer['instrumentalness'].append(track.audio_summary['instrumentalness'])
-        # if hasattr(track, 'speechiness'):
         track_md.buffer['speechiness'].append(track.audio_summary['speechiness'])
         # TODO track['song_type']
 
 
 def getEchonestArtistMetadata(artist):
-    # artist_location?
-
     artist_md.echonest_id = artist.id
-    artist_md.buffer['release_count'].append(artist.doc_counts['songs'])  # TODO: songs = release or recording or work?
+    # artist_md.buffer['recording_count'].append(artist.doc_counts['songs'])
     artist_md.buffer['news'].append(artist.doc_counts['news'])
-    # more doc types: audio, biographies, blogs, images, reviews, video
 
     for term in artist.terms:
         track_md.addTag(term['name'], term['weight'])
@@ -360,7 +378,7 @@ def getEchonestMetadata(track, search_artist=True):
                 '''
                 artists = echonest_artist.search(name=track[0])
                 for artist in artists:
-                    if utils.is_similar(artist.name, track[0]):
+                    if utils.is_similar(artist.name, track[0], normalize=True):
                         possible_artists.append(artist)
                 if len(possible_artists) > 1:
                     pass  # TODO let user choose
@@ -368,16 +386,21 @@ def getEchonestMetadata(track, search_artist=True):
                     getEchonestArtistMetadata(possible_artists[0])
             else:
                 getEchonestArtistMetadata(echonest_artist.Artist(artist_id))
-    except socket.timeout:  # TODO: try again later
-        print "Socket timeout..."
+    except socket.timeout:
+        track_md.error = True
+        print colored("| Socket timeout...", 'red')
 
 
 def getLastfmTrackMetadata(recording):
-    track_md.lastfm_id = recording.get_id()
-    for tag in recording.get_top_tags():
-        track_md.addTag(tag.item.name, tag.weight)
-    if recording.get_duration() > 0:
-        track_md.buffer['length'].append(recording.get_duration() / 1000)
+    try:
+        track_md.lastfm_id = recording.get_id()
+        for tag in recording.get_top_tags():
+            track_md.addTag(tag.item.name, tag.weight)
+        if recording.get_duration() > 0:
+            track_md.buffer['length'].append(recording.get_duration() / 1000)
+    except pylast.MalformedResponseError:
+        track_md.error = True
+        print colored("| LastFM error...", 'red')
 
 
 def getLastfmArtistsMetadata(artist):
@@ -389,13 +412,14 @@ def getLastfmArtistsMetadata(artist):
 
 
 def getLastfmMetadata(track, search_artist=True):
-    recording = lastfm.get_track(track[0], track[1])
     try:
+        recording = lastfm.get_track(track[0], track[1])
         if search_artist:
             getLastfmArtistsMetadata(recording.get_artist())
         getLastfmTrackMetadata(recording)
-    except pylast.WSError:
-        pass  # TODO
+    except pylast.WSError, pylast.MalformedResponseError:
+        track_md.error = True
+        print colored("| LastFM error...", 'red')
 
 
 def getSpotifyTrackMetadata(possible_tracks):
@@ -407,7 +431,7 @@ def getSpotifyTrackMetadata(possible_tracks):
 def getSpotifyArtistMetadata(artist):
     artist_md.spotify_id = artist['id']
     artist_md.buffer['followers'].append(artist['followers']['total'])
-    if artist_md.genre_other is None or artist_md.genre_other is True:
+    if artist_md.genre_other is None or artist_md.genre_other:
         artist_md.addGenres(artist['genres'])
 
     artist_md.buffer['popularity'].append(artist['popularity'])
@@ -449,12 +473,14 @@ def getPeakCategory(peak):
         return CAT2
     elif peak < 11:
         return CAT3
-    elif peak < 51:
+    elif peak < 21:
         return CAT4
-    elif peak < 101:
+    elif peak < 51:
         return CAT5
-    else:
+    elif peak < 101:
         return CAT6
+    else:
+        return CAT7
 
 
 def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
@@ -473,7 +499,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
         '''
 
         track_results = {}
-        dist_chart_peak = {CAT1: 0, CAT2: 0, CAT3: 0, CAT4: 0, CAT5: 0}
+        dist_chart_peak = {CAT1: 0, CAT2: 0, CAT3: 0, CAT4: 0, CAT5: 0, CAT6: 0}
         total_chart_weeks = 0
         mean_chart_weeks = []
         mean_chart_peak = []
@@ -499,7 +525,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
                 '''
                 Check if the artist of the song matches the target artist
                 '''
-                if track[0] in chart.findChildren()[2].previousSibling.strip():
+                if track[0] in chart.findChildren()[2].previousSibling.strip().lower():
                     '''
                     Get the chart data of the song ("Wochen: X Peak: Y")
                     '''
@@ -546,66 +572,50 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
     return results
 
 
-def getMetadata(fileList):
+def getMetadata(file, artistName, search_artist):
     global track_md, artist_md, tries
     tracks = []
     artists = []
     last_request = 0
 
-    try:
-        avail_artists = pd.read_csv(os.path.join('features', 'meta_artist.csv'))
-    except ValueError:
-        avail_artists = pd.DataFrame()
-    for artistTuple in fileList:
-        artistName = artistTuple[0]
-        search_artist = True
-        if "name" in avail_artists.columns.values and artistName in avail_artists["name"].values:
-            search_artist = False
-        for trackTuple in artistTuple[1]:
-            print "---------- Colltecting data for {0} by {1} ----------\n|".format(trackTuple[1], artistName)
-            track_md = TrackMetadata(trackTuple[1], artistName)
-            if search_artist:
-                artist_md = ArtistMetadata(artistName)
+    print "| => Collecting data for {0} by {1} \n|".format(file[1], artistName)
+    track_md = TrackMetadata(file[1], artistName)
+    if search_artist:
+        artist_md = ArtistMetadata(artistName)
+        artist_md.clean_name = utils.normalizeName(artistName)
 
-            normalizedName = utils.normalizeName(trackTuple[1])
-            track = [artistName.lower(), normalizedName]
+    track_md.clean_name = utils.normalizeName(file[1])
 
-            print "| Collecting data from Musicbrainz..."
-            if MAX_TRIES > tries or time.time() - last_request > TRY_AGAIN_AFTER:
-                last_request = time.time()
-                # tries -= 1
-                getMusicbrainzMetadata(track, search_artist)
-            else:
-                print "|    The Musicbrainz-service was not reachable the last {} tries. Try again in {} seconds".format(
-                        MAX_TRIES, int(TRY_AGAIN_AFTER - (time.time() - last_request)))
-            print "| Collecting data from Discogs..."
-            getDiscogsMetadata(track, search_artist)
-            print "| Collecting data from Echonest..."
-            getEchonestMetadata(track, search_artist)
-            print "| Collecting data from Last.FM..."
-            getLastfmMetadata(track, search_artist)
-            print "| Collecting data from Spotify..."
-            getSpotifyMetadata(track, search_artist)
+    track = [artistName.lower(), track_md.clean_name]
 
-            print "|"
+    print "| Collecting data from Musicbrainz..."
+    if MAX_TRIES > tries or time.time() - last_request > TRY_AGAIN_AFTER:
+        last_request = time.time()
+        # tries -= 1
+        getMusicbrainzMetadata(track, search_artist)
+    else:
+        print "|    The Musicbrainz-service was not reachable the last {} tries. Try again in {} seconds".format(
+                MAX_TRIES, int(TRY_AGAIN_AFTER - (time.time() - last_request)))
+    print "| Collecting data from Discogs..."
+    getDiscogsMetadata(track, search_artist)
+    print "| Collecting data from Echonest..."
+    getEchonestMetadata(track, search_artist)
+    print "| Collecting data from Last.FM..."
+    getLastfmMetadata(track, search_artist)
+    print "| Collecting data from Spotify..."
+    getSpotifyMetadata(track, search_artist)
 
-            print "| Searching for peak position..."
-            chartData = getPeakPosition([[track[0], track[1]]], searchArtist=search_artist)[0]
-            track_md.addChartData(chartData)
-            if search_artist:
-                artist_md.addChartData(chartData)
+    print "|"
 
-            tracks.append(track_md.normalize().getData())
-            if search_artist:
-                artists.append(artist_md.normalize().getData())
-            search_artist = False
+    print "| Searching for peak position..."
+    chartData = getPeakPosition([[track[0], track[1]]], searchArtist=search_artist)[0]
+    track_md.addChartData(chartData)
+    if search_artist:
+        artist_md.addChartData(chartData)
 
-            print "|"
-    print "-------------------------------------------------------"
+    tracks.append(track_md.normalize().getData())
+    if search_artist:
+        artists.append(artist_md.normalize().getData())
 
-    artist_df = pd.DataFrame(artists)
-    track_df = pd.DataFrame(tracks)
-
-    artist_df.to_csv(os.path.join('features', 'meta_artist.csv'), mode='a', index=False)
-    track_df.to_csv(os.path.join('features', 'meta_track.csv'), mode='a', index=False)
-    return artist_df, track_df
+    print "|"
+    return track_md, artist_md

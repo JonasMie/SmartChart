@@ -1,5 +1,5 @@
 # coding=utf-8
-import tkFileDialog
+import Tkinter, tkFileDialog
 from os import listdir
 from os.path import *
 
@@ -7,7 +7,8 @@ from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
 
 from MIR.mir import *
-from metadata.request_metadata import getMetadata
+from dataCollector import collectData
+from utils import normalizeName
 
 
 # '''
@@ -44,25 +45,26 @@ def parseDirectory(directoryName, extensions):
 
     files_found = 0
     artists_found = 0
-
+    files = {}
     for subFolderName in listdir(directoryName):
-        artists_found += 1
-        subFolderFiles = list()
         for root, directories, filenames in os.walk(os.path.join(directoryName, subFolderName)):
             for filename in filenames:
-                # Only use stereo-files
-                if MP3(os.path.join(root, filename)).info.channels == 2:
+                if filename.endswith(extensions):  # and MP3(os.path.join(root, filename)).info.channels == 1:
                     files_found += 1
                     try:
                         trackName = ID3(os.path.join(root, filename))["TIT2"].text[0]
-                        # id3ArtistName = ID3(os.path.join(root, filename))['TPE1'].text[0]
+                        id3ArtistName = ID3(os.path.join(root, filename))['TPE1'].text[0]
+                        id3ArtistNameNorm = normalizeName(id3ArtistName)
                     except KeyError:
                         trackName = filename.rsplit(".", 1)[0].encode('utf-8')
-                    subFolderFiles.append(
+                    if id3ArtistNameNorm not in files:
+                        files[id3ArtistNameNorm] = list()
+                        artists_found += 1
+                    files[id3ArtistNameNorm].append(
                             (os.path.join(root, filename).encode('utf-8'), trackName))
-        folders.append((subFolderName.encode('utf-8'), subFolderFiles))
+                    # folders.append((subFolderName.encode('utf-8'), subFolderFiles))
 
-    return folders, artists_found, files_found
+    return files, artists_found, files_found
 
 
 def usage():
@@ -75,10 +77,14 @@ def usage():
 
 
 if __name__ == "__main__":
-    # Choose Directory which contains all training files
-    dir = tkFileDialog.askdirectory(title="Choose Directory of training images")
-    fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3", "wav"))
+    root = Tkinter.Tk()
+    root.withdraw()
 
+    dir = tkFileDialog.askdirectory(parent=root, title='Pick a directory')
+    root.destroy()
+    # dir = tkFileDialog.askdirectory(parent=root)
+
+    fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3"))
     print "Found {} files ({} artists)".format(tracks_found, artists_found)
 
-    getMetadata(fileList)
+    collectData(fileList)

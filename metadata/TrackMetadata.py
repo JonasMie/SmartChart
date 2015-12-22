@@ -41,6 +41,7 @@ class TrackMetadata(MetadataBase):
     def getData(self):
         return {
             'name': self.name,
+            'clean_name': self.clean_name,
             'artist_name': self.artist_name,
             'length': self.length,
             'instrumentalness:': self.instrumentalness,
@@ -63,5 +64,6 @@ class TrackMetadata(MetadataBase):
             'echonest_id': self.echonest_id,
             'spotify_id': self.spotify_id,
             'peakCategory': self.peakCategory,
-            'peakWeeks': self.peakWeeks
+            'peakWeeks': self.peakWeeks,
+            'error': self.error
         }
