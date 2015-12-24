@@ -51,17 +51,19 @@ def parseDirectory(directoryName, extensions):
             for filename in filenames:
                 if filename.endswith(extensions):  # and MP3(os.path.join(root, filename)).info.channels == 1:
                     files_found += 1
+                    # if files_found == 10:
+                    #     return files, artists_found, files_found
                     try:
-                        trackName = ID3(os.path.join(root, filename))["TIT2"].text[0]
-                        id3ArtistName = ID3(os.path.join(root, filename))['TPE1'].text[0]
-                        id3ArtistNameNorm = normalizeName(id3ArtistName)
+                        trackName = unicode(ID3(os.path.join(root, filename))["TIT2"].text[0])
+                        id3ArtistName = unicode(ID3(os.path.join(root, filename))['TPE1'].text[0])
+                        id3ArtistNameNorm = unicode(normalizeName(id3ArtistName))
                     except KeyError:
-                        trackName = filename.rsplit(".", 1)[0].encode('utf-8')
+                        trackName = unicode(filename.rsplit(".", 1)[0])
                     if id3ArtistNameNorm not in files:
                         files[id3ArtistNameNorm] = list()
                         artists_found += 1
                     files[id3ArtistNameNorm].append(
-                            (os.path.join(root, filename).encode('utf-8'), trackName))
+                            (unicode(os.path.join(root, filename)), trackName))
                     # folders.append((subFolderName.encode('utf-8'), subFolderFiles))
 
     return files, artists_found, files_found

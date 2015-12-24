@@ -81,7 +81,7 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
     net = create(spec)
     snet = mar_refs(spec)
     fname = net.getControl("SoundFileSource/src/mrs_string/filename")
-    fname.setValue_string(input_filename)
+    fname.setValue_string(input_filename.encode('ascii'))
 
     dest = net.getControl("CsvSink/dest/mrs_string/filename")
     dest.setValue_string(csv_results)

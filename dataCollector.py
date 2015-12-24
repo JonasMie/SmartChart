@@ -30,13 +30,10 @@ def collectData(fileList):
                           (utils.normalizeName(track[1]), artist_id))
                 track_ = c.fetchone()
                 if track_ is not None:
-                    print "| => Collecting data for {0} by {1} \n|".format(track[1], artistName)
+                    print u"| => Collecting data for {0} by {1} \n|".format(track[1], artistName)
                     print "|\n| Data is already existing"
                     print "|\n|-------------------------------------------------------"
                     continue
-
-            # if artist is not None:
-            #     artist_id = artist[0]
             track_md, artist_md = getMetadata(track, artistName, search_artist=search_artist)
             if search_artist and artist_md is not None:
                 c.execute(

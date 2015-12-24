@@ -14,7 +14,6 @@ import pylast
 import requests
 import spotipy
 from bs4 import BeautifulSoup
-from unidecode import unidecode
 from termcolor import colored
 
 import config
@@ -178,11 +177,13 @@ def getMusicbrainzMetadata(track, search_artist=True):
                     resolve any disambiguations
                     if the current artist has the same name as the next artist in the list, then let the user choose the right one
                     '''
-                    if len(artists['artist-list']) - 1 > i and unidecode(artist['name']) == unidecode(
-                            artists['artist-list'][i + 1]['name']) == track[0]:
+                    if len(artists['artist-list']) - 1 > i and utils.is_similar(artist['name'],
+                                                                                artists['artist-list'][i + 1]['name'],
+                                                                                normalize=True) and utils.is_similar(
+                            track[0], artist['name'], normalize=True):
                         choice = True
                         if i == 0:
-                            print "Sorry, the artist '{0}' is ambigious, please chose the right one:\n[{1}] None of the options".format(
+                            print u"Sorry, the artist '{0}' is ambigious, please chose the right one:\n[{1}] None of the options".format(
                                     artist['name'], i)
                         print u"[{0}] {1}: {2}".format(i + 1, artist['name'],
                                                        artist[
@@ -194,7 +195,7 @@ def getMusicbrainzMetadata(track, search_artist=True):
                         try:
                             artist_int = int(input)
                             if artist_int == 0:
-                                pass  # TODO: no artist fits
+                                return
                             # FIXME: why does musicbrainzngs.search_artist() not provide this information? => double request necessary
                             # getMusicbrainzArtistMetadata(artists['artist-list'][artist_int - 1])
                             getMusicbrainzArtistMetadata(
@@ -207,7 +208,7 @@ def getMusicbrainzMetadata(track, search_artist=True):
                         except ValueError:
                             pass  # TODO
                         break
-                    elif utils.is_similar(unidecode(artist['name']), track[0], normalize=True):
+                    elif utils.is_similar(artist['name'], track[0], normalize=True):
                         # FIXME: why does musicbrainzngs.search_artist() not provide this information? => double request necessary
                         getMusicbrainzArtistMetadata(musicbrainzngs.get_artist_by_id(artist['id'],
                                                                                      ['recordings', 'releases',
@@ -283,7 +284,7 @@ def getDiscogsMetadata(track, search_artist=True):
     # The best, most performant and according to discogs 'correct' way to query the data is the call above this comment, but... well, it does not work, so I try to get the best results with
     # this call:
     try:
-        releases = discogs.search("{0}+{1}".format(track[0], track[1]), type="release")
+        releases = discogs.search(u"{0}+{1}".format(track[0], track[1]), type="release")
         processed_artist = False
         for release in releases:
             '''
@@ -578,7 +579,7 @@ def getMetadata(file, artistName, search_artist):
     artists = []
     last_request = 0
 
-    print "| => Collecting data for {0} by {1} \n|".format(file[1], artistName)
+    print u"| => Collecting data for {0} by {1} \n|".format(file[1], artistName)
     track_md = TrackMetadata(file[1], artistName)
     if search_artist:
         artist_md = ArtistMetadata(artistName)
