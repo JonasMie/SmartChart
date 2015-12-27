@@ -15,21 +15,11 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
         "Fanout/timeDomainSeries",
         [
             [
-                "Series/dglkj",
+                "Series/acr_max",
                 [
                     "AutoCorrelation/acr",
                     "Peaker/pkr",
-                    # ["Fanout/oeirjs", [
-                    #     [
-                    #         "Parallel/alsjwer",
-                    # [
-
                     "MaxArgMax/acr_max",
-                    # ]]
-                    #
-                    # ]
-                    # ]
-
                 ]
             ],
             [
@@ -140,28 +130,81 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
         i += 1
 
     mean = results.mean()
+    std = results.std()
     if channels == 1:
-        res = {'acr': mean[0], 'amdf': mean[1], 'zcr': mean[2], 'nrg': mean[3], 'pow': mean[4], 'cent': mean[5],
-               'flx': mean[6], 'rlf': mean[7],
-               'mfcc_0': mean[8], 'mfcc_1': mean[9], 'mfcc_2': mean[10], 'mfcc_3': mean[11], 'mfcc_4': mean[12],
-               'mfcc_5': mean[13], 'mfcc_6': mean[14], 'mfcc_7': mean[15], 'mfcc_8': mean[16], 'mfcc_9': mean[17],
-               'mfcc_10': mean[18], 'mfcc_11': mean[19], 'mfcc_12': mean[20],
-               'chr_0': mean[21], 'chr_1': mean[22], 'chr_2': mean[23], 'chr_3': mean[24], 'chr_4': mean[25],
-               'chr_5': mean[26], 'chr_6': mean[27], 'chr_7': mean[28], 'chr_8': mean[29], 'chr_9': mean[30],
-               'chr_10': mean[31], 'chr_11': mean[32], 'acr_lag': mean[33]}
+        res = {
+            'acr': mean[0], 'acr_std': std[0],
+            'amdf': mean[1], 'amdf_std': std[1],
+            'zcr': mean[2], 'zcr_std': std[2],
+            'nrg': mean[3], 'nrg_std': std[3],
+            'pow': mean[4], 'pow_std': std[4],
+            'cent': mean[5], 'cent_std': std[5],
+            'flx': mean[6], 'flx_std': std[6],
+            'rlf': mean[7], 'rlf_std': std[7],
+            'mfcc_0': mean[8], 'mfcc_0_std': std[8],
+            'mfcc_1': mean[9], 'mfcc_1_std': std[9],
+            'mfcc_2': mean[10], 'mfcc_2_std': std[10],
+            'mfcc_3': mean[11], 'mfcc_3_std': std[11],
+            'mfcc_4': mean[12], 'mfcc_4_std': std[12],
+            'mfcc_5': mean[13], 'mfcc_5_std': std[13],
+            'mfcc_6': mean[14], 'mfcc_6_std': std[14],
+            'mfcc_7': mean[15], 'mfcc_7_std': std[15],
+            'mfcc_8': mean[16], 'mfcc_8_std': std[16],
+            'mfcc_9': mean[17], 'mfcc_9_std': std[17],
+            'mfcc_10': mean[18], 'mfcc_10_std': std[18],
+            'mfcc_11': mean[19], 'mfcc_11_std': std[19],
+            'mfcc_12': mean[20], 'mfcc_12_std': std[20],
+            'chr_0': mean[21], 'chr_0_std': std[21],
+            'chr_1': mean[22], 'chr_1_std': std[22],
+            'chr_2': mean[23], 'chr_2_std': std[23],
+            'chr_3': mean[24], 'chr_3_std': std[24],
+            'chr_4': mean[25], 'chr_4_std': std[25],
+            'chr_5': mean[26], 'chr_5_std': std[26],
+            'chr_6': mean[27], 'chr_6_std': std[27],
+            'chr_7': mean[28], 'chr_7_std': std[28],
+            'chr_8': mean[29], 'chr_8_std': std[29],
+            'chr_9': mean[30], 'chr_9_std': std[30],
+            'chr_10': mean[31], 'chr_10_std': std[31],
+            'chr_11': mean[32], 'chr_11_std': std[32],
+            'acr_lag': mean[33], 'acr_lag_std': std[33]
+        }
     else:
-        res = {'acr': np.mean((mean[0], mean[1])), 'amdf': np.mean((mean[2], mean[3])),
-               'zcr': np.mean((mean[4], mean[5])), 'nrg': np.mean((mean[6], mean[7])),
-               'pow': np.mean((mean[8], mean[9])),
-               'cent': mean[10],
-               'flx': mean[11],
-               'rlf': mean[12],
-               'mfcc_0': mean[13], 'mfcc_1': mean[14], 'mfcc_2': mean[15], 'mfcc_3': mean[16], 'mfcc_4': mean[17],
-               'mfcc_5': mean[18], 'mfcc_6': mean[19], 'mfcc_7': mean[20], 'mfcc_8': mean[21], 'mfcc_9': mean[22],
-               'mfcc_10': mean[23], 'mfcc_11': mean[24], 'mfcc_12': mean[25],
-               'chr_0': mean[26], 'chr_1': mean[27], 'chr_2': mean[28], 'chr_3': mean[29], 'chr_4': mean[30],
-               'chr_5': mean[31], 'chr_6': mean[32], 'chr_7': mean[33], 'chr_8': mean[34], 'chr_9': mean[35],
-               'chr_10': mean[36], 'chr_11': mean[37], 'acr_lag': np.mean((mean[38], mean[39]))}
+        res = {
+            'acr': np.mean((mean[0], mean[1])), 'acr_std': np.mean((std[0], std[1])),
+            'amdf': np.mean((mean[2], mean[3])), 'amdf_std': np.mean((std[2], std[3])),
+            'zcr': np.mean((mean[4], mean[5])), 'zcr_std': np.mean((std[4], std[5])),
+            'nrg': np.mean((mean[6], mean[7])), 'nrg_std': np.mean((std[6], std[7])),
+            'pow': np.mean((mean[8], mean[9])), 'pow_std': np.mean((std[8], std[9])),
+            'cent': mean[10], 'cent_std': std[10],
+            'flx': mean[11], 'flx_std': std[11],
+            'rlf': mean[12], 'rlf_std': std[12],
+            'mfcc_0': mean[13], 'mfcc_0_std': std[13],
+            'mfcc_1': mean[14], 'mfcc_1_std': std[14],
+            'mfcc_2': mean[15], 'mfcc_2_std': std[15],
+            'mfcc_3': mean[16], 'mfcc_3_std': std[16],
+            'mfcc_4': mean[17], 'mfcc_4_std': std[17],
+            'mfcc_5': mean[18], 'mfcc_5_std': std[18],
+            'mfcc_6': mean[19], 'mfcc_6_std': std[19],
+            'mfcc_7': mean[20], 'mfcc_7_std': std[20],
+            'mfcc_8': mean[21], 'mfcc_8_std': std[21],
+            'mfcc_9': mean[22], 'mfcc_9_std': std[22],
+            'mfcc_10': mean[23], 'mfcc_10_std': std[23],
+            'mfcc_11': mean[24], 'mfcc_11_std': std[24],
+            'mfcc_12': mean[25], 'mfcc_12_std': std[25],
+            'chr_0': mean[26], 'chr_0_std': std[26],
+            'chr_1': mean[27], 'chr_1_std': std[27],
+            'chr_2': mean[28], 'chr_2_std': std[28],
+            'chr_3': mean[29], 'chr_3_std': std[29],
+            'chr_4': mean[30], 'chr_4_std': std[30],
+            'chr_5': mean[31], 'chr_5_std': std[31],
+            'chr_6': mean[32], 'chr_6_std': std[32],
+            'chr_7': mean[33], 'chr_7_std': std[33],
+            'chr_8': mean[34], 'chr_8_std': std[34],
+            'chr_9': mean[35], 'chr_9_std': std[35],
+            'chr_10': mean[36], 'chr_10_std': std[36],
+            'chr_11': mean[37], 'chr_11_std': std[37],
+            'acr_lag': np.mean((mean[38], mean[39])), 'acr_lag_std': np.mean((std[38], std[39]))
+        }
     return res
 
 

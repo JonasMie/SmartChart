@@ -1,7 +1,8 @@
+from __future__ import division
+
 import sqlite3
 
 import time
-
 from termcolor import colored
 from metadata.request_metadata import getMetadata
 from MIR.mir import marsyas_analyse
@@ -10,8 +11,9 @@ import utils
 conn = sqlite3.connect('data.db')
 
 
-def collectData(fileList):
+def collectData(fileList, tracks_found):
     c = conn.cursor()
+    currTrack = 0
     for artist, tracks in fileList.iteritems():
         search_artist = True
         artist_id = None
@@ -24,14 +26,21 @@ def collectData(fileList):
             search_artist = False
 
         for track in tracks:
+            if track[0] == "/Volumes/JONAS IPOD/iPod_Control/Music/F11/TDVZ.mp3":  # TODO: FIX
+                continue
+            currTrack += 1
+            print colored(u"| => Collecting data for {0} by {1}".format(track[1], artistName), 'blue')
+            print colored(u"| => Track {0} of {1}".format(currTrack, tracks_found),
+                          'blue')
+            print ("|")
             saveTrack = True
             if artist_id is not None:
                 c.execute('SELECT * FROM track WHERE clean_name=? AND artist_id=?',
                           (utils.normalizeName(track[1]), artist_id))
                 track_ = c.fetchone()
                 if track_ is not None:
-                    print u"| => Collecting data for {0} by {1} \n|".format(track[1], artistName)
-                    print "|\n| Data is already existing"
+                    print u"|\n| Data is already existing    | Processed {0:.2f}%".format(
+                            (currTrack / tracks_found) * 100)
                     print "|\n|-------------------------------------------------------"
                     continue
             track_md, artist_md = getMetadata(track, artistName, search_artist=search_artist)
@@ -54,7 +63,7 @@ def collectData(fileList):
             if saveTrack:
                 track_mir = marsyas_analyse(track[0])
                 c.execute(
-                        'INSERT INTO track (name, clean_name, artist_id, musicbrainz_id, discogs_id, lastfm_id,echonest_id, spotify_id, genre_electronic, genre_pop, genre_hiphop, genre_rock, genre_country, genre_jazz, genre_soul, genre_other, year, length, available_markets, available_on_spotify_in_ger, exists_remix, instrumentalness, speechiness, date, zcr, nrg, pow,acr,acr_lag,amdf,cent,flx,rlf,mfcc_0,mfcc_1,mfcc_2, mfcc_3,mfcc_4,mfcc_5,mfcc_6,mfcc_7,mfcc_8,mfcc_9,mfcc_10,mfcc_11,mfcc_12,chr_0,chr_1,chr_2,chr_3,chr_4,chr_5,chr_6,chr_7,chr_8,chr_9,chr_10,chr_11, peak_cat, peak_weeks, error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                        'INSERT INTO track (name, clean_name, artist_id, musicbrainz_id, discogs_id, lastfm_id,echonest_id, spotify_id, genre_electronic, genre_pop, genre_hiphop, genre_rock, genre_country, genre_jazz, genre_soul, genre_other, year, length, available_markets, available_on_spotify_in_ger, exists_remix, instrumentalness, speechiness, date, zcr, zcr_std, nrg, nrg_std,pow, pow_std,acr, acr_std,acr_lag, acr_lag_std,amdf,amdf_std,cent,cent_std,flx,flx_std,rlf,rlf_std, mfcc_0,mfcc_0_std,mfcc_1, mfcc_1_std,mfcc_2, mfcc_2_std, mfcc_3, mfcc_3_std,mfcc_4, mfcc_4_std,mfcc_5,mfcc_5_std,mfcc_6,mfcc_6_std,mfcc_7,mfcc_7_std,mfcc_8,mfcc_8_std,mfcc_9,mfcc_9_std,mfcc_10,mfcc_10_std,mfcc_11,mfcc_11_std,mfcc_12,mfcc_12_std, chr_0,chr_0_std,chr_1,chr_1_std,chr_2,chr_2_std,chr_3,chr_3_std,chr_4,chr_4_std,chr_5,chr_5_std,chr_6,chr_6_std,chr_7,chr_7_std,chr_8,chr_8_std,chr_9,chr_9_std,chr_10,chr_10_std,chr_11, chr_11_std,peak_cat, peak_weeks, error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                         (track_md.name, track_md.clean_name, artist_id, track_md.musicbrainz_id, track_md.discogs_id,
                          track_md.lastfm_id, track_md.echonest_id, track_md.spotify_id, track_md.genre_electronic,
                          track_md.genre_pop, track_md.genre_hiphop, track_md.genre_rock, track_md.genre_country,
@@ -63,23 +72,47 @@ def collectData(fileList):
                          track_md.available_markets,
                          track_md.available_on_spotify_in_ger, track_md.exists_remix, track_md.instrumentalness,
                          track_md.speechiness, time.time(),
-                         track_mir['zcr'], track_mir['nrg'], track_mir['pow'], track_mir['acr'], track_mir['acr_lag'],
-                         track_mir['amdf'],
-                         track_mir['cent'],
-                         track_mir['flx'], track_mir['rlf'], track_mir['mfcc_0'], track_mir['mfcc_1'], track_mir['mfcc_2'],
-                         track_mir['mfcc_3'],
-                         track_mir['mfcc_4'], track_mir['mfcc_5'], track_mir['mfcc_6'], track_mir['mfcc_7'],
-                         track_mir['mfcc_8'], track_mir['mfcc_9'],
-                         track_mir['mfcc_10'], track_mir['mfcc_11'], track_mir['mfcc_12'],
-                         track_mir['chr_0'], track_mir['chr_1'], track_mir['chr_2'], track_mir['chr_3'], track_mir['chr_4'],
-                         track_mir['chr_5'], track_mir['chr_6'],
-                         track_mir['chr_7'], track_mir['chr_8'], track_mir['chr_9'], track_mir['chr_10'],
-                         track_mir['chr_11'],
+                         track_mir['zcr'], track_mir['zcr_std'],
+                         track_mir['nrg'], track_mir['nrg_std'],
+                         track_mir['pow'], track_mir['pow_std'],
+                         track_mir['acr'], track_mir['acr_std'],
+                         track_mir['acr_lag'], track_mir['acr_lag_std'],
+                         track_mir['amdf'], track_mir['amdf_std'],
+                         track_mir['cent'], track_mir['cent_std'],
+                         track_mir['flx'], track_mir['flx_std'],
+                         track_mir['rlf'], track_mir['rlf_std'],
+                         track_mir['mfcc_0'], track_mir['mfcc_0_std'],
+                         track_mir['mfcc_1'], track_mir['mfcc_1_std'],
+                         track_mir['mfcc_2'], track_mir['mfcc_2_std'],
+                         track_mir['mfcc_3'], track_mir['mfcc_3_std'],
+                         track_mir['mfcc_4'], track_mir['mfcc_4_std'],
+                         track_mir['mfcc_5'], track_mir['mfcc_5_std'],
+                         track_mir['mfcc_6'], track_mir['mfcc_6_std'],
+                         track_mir['mfcc_7'], track_mir['mfcc_7_std'],
+                         track_mir['mfcc_8'], track_mir['mfcc_8_std'],
+                         track_mir['mfcc_9'], track_mir['mfcc_9_std'],
+                         track_mir['mfcc_10'], track_mir['mfcc_10_std'],
+                         track_mir['mfcc_11'], track_mir['mfcc_11_std'],
+                         track_mir['mfcc_12'], track_mir['mfcc_12_std'],
+                         track_mir['chr_0'], track_mir['chr_0_std'],
+                         track_mir['chr_1'], track_mir['chr_1_std'],
+                         track_mir['chr_2'], track_mir['chr_2_std'],
+                         track_mir['chr_3'], track_mir['chr_3_std'],
+                         track_mir['chr_4'], track_mir['chr_4_std'],
+                         track_mir['chr_5'], track_mir['chr_5_std'],
+                         track_mir['chr_6'], track_mir['chr_6_std'],
+                         track_mir['chr_7'], track_mir['chr_7_std'],
+                         track_mir['chr_8'], track_mir['chr_8_std'],
+                         track_mir['chr_9'], track_mir['chr_9_std'],
+                         track_mir['chr_10'], track_mir['chr_10_std'],
+                         track_mir['chr_11'], track_mir['chr_11_std'],
                          track_md.peakCategory, track_md.peakWeeks,
                          track_md.error))
             print "|\n|\n|"
-            print colored("| Data saved with errors", 'yellow') if track_md.error else colored(
-                    "| Data saved successfully", 'green')
-            print "|------------------------------------------------------"
             conn.commit()
+            print colored(u"| Data saved with errors    | Processed {0:.2f}%".format((currTrack / tracks_found) * 100),
+                          'yellow') if track_md.error else colored(
+                    u"| Data saved successfully    | Processed {0:.2f}%".format((currTrack / tracks_found) * 100),
+                    'green')
+            print "|------------------------------------------------------"
     conn.close()
