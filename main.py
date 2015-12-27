@@ -9,6 +9,7 @@ from mutagen.mp3 import MP3
 from MIR.mir import *
 from dataCollector import collectData
 from utils import normalizeName
+import pickle
 
 
 # '''
@@ -41,8 +42,6 @@ def parseDirectory(directoryName, extensions):
     '''
     if not isdir(directoryName): return
 
-    folders = list()
-
     files_found = 0
     artists_found = 0
     files = {}
@@ -51,8 +50,8 @@ def parseDirectory(directoryName, extensions):
             for filename in filenames:
                 if filename.endswith(extensions):  # and MP3(os.path.join(root, filename)).info.channels == 1:
                     files_found += 1
-                    # if files_found == 10:
-                    #     return files, artists_found, files_found
+                    # if files_found == 11:
+                    # return files, artists_found, files_found
                     try:
                         trackName = unicode(ID3(os.path.join(root, filename))["TIT2"].text[0])
                         id3ArtistName = unicode(ID3(os.path.join(root, filename))['TPE1'].text[0])
@@ -64,8 +63,8 @@ def parseDirectory(directoryName, extensions):
                         artists_found += 1
                     files[id3ArtistNameNorm].append(
                             (unicode(os.path.join(root, filename)), trackName))
-                    # folders.append((subFolderName.encode('utf-8'), subFolderFiles))
-
+    with open(os.path.join('files', 'files.pkl'), 'wb') as f:
+        pickle.dump(files, f, pickle.HIGHEST_PROTOCOL)
     return files, artists_found, files_found
 
 
@@ -79,14 +78,15 @@ def usage():
 
 
 if __name__ == "__main__":
-    root = Tkinter.Tk()
-    root.withdraw()
+    # root = Tkinter.Tk()
+    # root.withdraw()
+    # dir = tkFileDialog.askdirectory(parent=root, title='Pick a directory')
+    # root.destroy()
 
-    dir = tkFileDialog.askdirectory(parent=root, title='Pick a directory')
-    root.destroy()
-    # dir = tkFileDialog.askdirectory(parent=root)
+    # dir = "/Volumes/JONAS IPOD/iPod_Control/Music/"
+    # fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3"))
+    # print "Found {} files ({} artists)".format(tracks_found, artists_found)
 
-    fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3"))
-    print "Found {} files ({} artists)".format(tracks_found, artists_found)
-
-    collectData(fileList)
+    with open(os.path.join('files', 'files.pkl'), 'rb') as f:
+        fileList = pickle.load(f)
+        collectData(fileList, 16366)
