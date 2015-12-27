@@ -27,7 +27,7 @@ class TrackMetadata(MetadataBase):
         self.available_markets = None
         self.available_on_spotify_in_ger = False
 
-        self.peakCategory = 6
+        self.peakCategory = 7
         self.peakWeeks = 0
 
     def setSpotifyMarkets(self, markets):

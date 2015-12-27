@@ -305,7 +305,7 @@ def getDiscogsMetadata(track, search_artist=True):
                                 getDiscogsTrackMetadata(release, track_obj)
                                 return
 
-        if not processed_artist:
+        if not processed_artist and search_artist:
             artists = discogs.search(track[0], type="artist")
             for artist in artists:
                 if utils.is_similar(artist.name.lower(), track[0]):
@@ -504,7 +504,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
         total_chart_weeks = 0
         mean_chart_weeks = []
         mean_chart_peak = []
-        target_peak_cat = CAT6
+        target_peak_cat = CAT7
         target_peak_weeks = 0
         target_url = None
 
@@ -562,7 +562,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
 
         if searchArtist:
             mean_chart_weeks = np.mean(mean_chart_weeks) if len(mean_chart_weeks) > 0 else 0
-            mean_chart_peak = getPeakCategory(np.mean(mean_chart_peak)) if len(mean_chart_peak) > 0 else CAT6
+            mean_chart_peak = getPeakCategory(np.mean(mean_chart_peak)) if len(mean_chart_peak) > 0 else CAT7
             track_results['artist_md'] = {'dist_chart_peak': dist_chart_peak, 'total_chart_weeks': total_chart_weeks,
                                           'mean_chart_weeks': mean_chart_weeks, 'mean_chart_peak': mean_chart_peak}
         track_results['target_peak_cat'] = target_peak_cat
@@ -578,8 +578,6 @@ def getMetadata(file, artistName, search_artist):
     tracks = []
     artists = []
     last_request = 0
-
-    print u"| => Collecting data for {0} by {1} \n|".format(file[1], artistName)
     track_md = TrackMetadata(file[1], artistName)
     if search_artist:
         artist_md = ArtistMetadata(artistName)

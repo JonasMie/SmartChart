@@ -57,7 +57,7 @@ class ArtistMetadata(MetadataBase):
         self.distChartPeak = None
         self.totalChartWeeks = 0
         self.meanChartWeeks = 0
-        self.meanChartPeak = 6
+        self.meanChartPeak = 7
 
     def addLanguage(self, lang):
         if lang == 'eng':
