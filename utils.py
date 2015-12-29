@@ -2,9 +2,11 @@ import datetime
 import difflib
 import re
 
+import sys
 from dateutil import parser
 
 feat = re.compile(r"([\[(](?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", re.I)
+progress_x = 0
 
 
 def getActivity(start, end=datetime.datetime.now(), format="%Y-%m-%d"):
@@ -43,6 +45,16 @@ def getDuration(length):
 
 
 def normalizeName(track):
+    '''
+
+    :param track:
+    :return: clean track name
+    '''
+
+    '''
+    Remove any 'featuring' from trackname
+    e.g. 'feat. XY', 'ft. XY', 'featuring XY',...
+    '''
     return re.sub(r"([\[(](\s)*(?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", '', track).strip().lower()
 
 
@@ -51,3 +63,23 @@ def is_similar(name1, name2, normalize=False, border=.9):
         name1 = normalizeName(name1)
         name2 = normalizeName(name2)
     return difflib.SequenceMatcher(a=name1, b=name2).ratio() >= border
+
+
+def startProgress(title):
+    global progress_x
+    sys.stdout.write(title + ": \n| [" + "-" * 40 + "]\n|  " + chr(8) * 41)
+    sys.stdout.flush()
+    progress_x = 0
+
+
+def progress(x):
+    global progress_x
+    x = int(x * 40 // 100)
+    sys.stdout.write("#" * (x - progress_x))
+    sys.stdout.flush()
+    progress_x = x
+
+
+def endProgress():
+    sys.stdout.write("#" * (40 - progress_x) + "\n")
+    sys.stdout.flush()
