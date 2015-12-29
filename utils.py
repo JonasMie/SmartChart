@@ -55,7 +55,7 @@ def normalizeName(track):
     Remove any 'featuring' from trackname
     e.g. 'feat. XY', 'ft. XY', 'featuring XY',...
     '''
-    return re.sub(r"([\[(](\s)*(?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", '', track).strip().lower()
+    return re.sub(r"([\[(](\s)*(?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", '', track.lower()).strip()
 
 
 def is_similar(name1, name2, normalize=False, border=.9):
