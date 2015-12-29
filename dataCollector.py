@@ -63,7 +63,7 @@ def collectData(fileList, tracks_found):
             if saveTrack:
                 track_mir = marsyas_analyse(track[0])
                 c.execute(
-                        'INSERT INTO track (name, clean_name, artist_id, musicbrainz_id, discogs_id, lastfm_id,echonest_id, spotify_id, genre_electronic, genre_pop, genre_hiphop, genre_rock, genre_country, genre_jazz, genre_soul, genre_other, year, length, available_markets, available_on_spotify_in_ger, exists_remix, instrumentalness, speechiness, date, zcr, zcr_std, nrg, nrg_std,pow, pow_std,acr, acr_std,acr_lag, acr_lag_std,amdf,amdf_std, eoe, eoe_std,cent,cent_std,flx,flx_std,rlf,rlf_std, mfcc_0,mfcc_0_std,mfcc_1, mfcc_1_std,mfcc_2, mfcc_2_std, mfcc_3, mfcc_3_std,mfcc_4, mfcc_4_std,mfcc_5,mfcc_5_std,mfcc_6,mfcc_6_std,mfcc_7,mfcc_7_std,mfcc_8,mfcc_8_std,mfcc_9,mfcc_9_std,mfcc_10,mfcc_10_std,mfcc_11,mfcc_11_std,mfcc_12,mfcc_12_std, chr_0,chr_0_std,chr_1,chr_1_std,chr_2,chr_2_std,chr_3,chr_3_std,chr_4,chr_4_std,chr_5,chr_5_std,chr_6,chr_6_std,chr_7,chr_7_std,chr_8,chr_8_std,chr_9,chr_9_std,chr_10,chr_10_std,chr_11, chr_11_std,peak_cat, peak_weeks, error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                        'INSERT INTO track (name, clean_name, artist_id, musicbrainz_id, discogs_id, lastfm_id,echonest_id, spotify_id, genre_electronic, genre_pop, genre_hiphop, genre_rock, genre_country, genre_jazz, genre_soul, genre_other, year, length, available_markets, available_on_spotify_in_ger, exists_remix, instrumentalness, speechiness, date, zcr, zcr_std, nrg, nrg_std,pow, pow_std,acr, acr_std,acr_lag, acr_lag_std,amdf,amdf_std, eoe, eoe_std, eoe_min,cent,cent_std,flx,flx_std,rlf,rlf_std, mfcc_0,mfcc_0_std,mfcc_1, mfcc_1_std,mfcc_2, mfcc_2_std, mfcc_3, mfcc_3_std,mfcc_4, mfcc_4_std,mfcc_5,mfcc_5_std,mfcc_6,mfcc_6_std,mfcc_7,mfcc_7_std,mfcc_8,mfcc_8_std,mfcc_9,mfcc_9_std,mfcc_10,mfcc_10_std,mfcc_11,mfcc_11_std,mfcc_12,mfcc_12_std, chr_0,chr_0_std,chr_1,chr_1_std,chr_2,chr_2_std,chr_3,chr_3_std,chr_4,chr_4_std,chr_5,chr_5_std,chr_6,chr_6_std,chr_7,chr_7_std,chr_8,chr_8_std,chr_9,chr_9_std,chr_10,chr_10_std,chr_11, chr_11_std,peak_cat, peak_weeks, error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                         (track_md.name, track_md.clean_name, artist_id, track_md.musicbrainz_id, track_md.discogs_id,
                          track_md.lastfm_id, track_md.echonest_id, track_md.spotify_id, track_md.genre_electronic,
                          track_md.genre_pop, track_md.genre_hiphop, track_md.genre_rock, track_md.genre_country,
@@ -78,7 +78,7 @@ def collectData(fileList, tracks_found):
                          track_mir['acr'], track_mir['acr_std'],
                          track_mir['acr_lag'], track_mir['acr_lag_std'],
                          track_mir['amdf'], track_mir['amdf_std'],
-                         track_mir['eoe'], track_mir['eoe_std'],
+                         track_mir['eoe'], track_mir['eoe_std'], track_mir['eoe_min'],
                          track_mir['cent'], track_mir['cent_std'],
                          track_mir['flx'], track_mir['flx_std'],
                          track_mir['rlf'], track_mir['rlf_std'],
