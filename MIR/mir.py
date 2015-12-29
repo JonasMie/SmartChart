@@ -1,16 +1,38 @@
 from __future__ import division
 
 import pandas as pd
+import time
 from marsyas_util import *
 import os
+import utils
 
 FEATURES_FILE = os.path.join('features', 'mir.csv')
 
 
-def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
-    print "| Analyzing file {}".format(input_filename)
+def entropy_of_energy(signal, winSize=512, nSubFrames=8):
+    subWinSize = int(winSize / nSubFrames)
+    entropies = zeros(len(signal))
+    i = 0
+    for channel in signal:
+        if (np.count_nonzero(channel)) == 0:
+            entropies[i] = 3.
+        else:
+            subEnergies = zeros(nSubFrames)
+            energy = (channel ** 2).sum()
+            swf = channel.reshape(-1, subWinSize)
 
-    csv_results = os.path.join('test', 'main', 'csv', 'main.csv')
+            j = 0
+            for subFrame in swf:
+                subEnergies[j] = ((subFrame ** 2).sum()) / (energy + np.finfo(float).eps)
+                j += 1
+            entropies[i] = (-np.nansum(subEnergies * np.log2(subEnergies + np.finfo(float).eps)))
+        i += 1
+    return entropies.mean()
+
+
+def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
+    utils.startProgress("| Analyzing file {}".format(input_filename))
+
     time_domain = [
         "Fanout/timeDomainSeries",
         [
@@ -20,6 +42,9 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
                     "AutoCorrelation/acr",
                     "Peaker/pkr",
                     "MaxArgMax/acr_max",
+                    # "Transposer/trans_0",
+                    # "Selector/sel",
+                    # "Transposer/trans_1"
                 ]
             ],
             [
@@ -57,33 +82,46 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
         "Series/main",
         [
             "SoundFileSource/src",
-            "Gain/gain",
             [
-                "Fanout/domains",
+                "Fanout/fout",
                 [
-                    time_domain,
-                    frequency_domain,
+                    [
+                        "Series/signal",
+                        [
+                            "Gain/gain",
+                            "Transposer/transpo",
+                        ]
+                    ],
+
+                    [
+                        "Fanout/domains",
+                        [
+                            time_domain,
+                            frequency_domain,
+                        ]
+                    ],
                 ]
-            ],
-            "CsvSink/dest"
+            ]
         ]
     ]
+
     net = create(spec)
     snet = mar_refs(spec)
-    fname = net.getControl("SoundFileSource/src/mrs_string/filename")
+    fname = net.getControl(snet['src'] + "/mrs_string/filename")
     fname.setValue_string(input_filename.encode('ascii'))
 
-    dest = net.getControl("CsvSink/dest/mrs_string/filename")
-    dest.setValue_string(csv_results)
     inSamples = net.getControl("mrs_natural/inSamples")
     inSamples.setValue_natural(winSize)
     nSamples = net.getControl(snet["src"] + "/mrs_natural/size").to_natural()
-    nSamples = net.getControl(snet["src"] + "/mrs_natural/size").to_natural()
+    nWindows = int(nSamples / winSize)
 
+
+    # selector = net.getControl(snet["sel"] + "/mrs_natural/disable")
+    # selector.setValue_natural(0)
     '''
     Check if mono, stereo or even multi-channeled
     '''
-    channels = net.getControl("SoundFileSource/src/mrs_natural/onObservations").to_natural()
+    channels = net.getControl(snet['src'] + "/mrs_natural/onObservations").to_natural()
     if channels != 1 and channels != 2:
         raise NameError('Sorry, only Mono & Stereo-Recordings supported.')
 
@@ -105,29 +143,22 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
         if i < n_chroma:
             chroma_features.append("chroma_{}".format(i))
 
-    features = time_features + ["cent_0", "flx_0", "rlf_0"] + mfcc_features + chroma_features
-
-    nFeatures = nTimeFeatures * channels + 3 + 13 + 12  # 13 Mel-Frequency Cepstral Coefficients & 12-sized Chroma Vector
-
+    features = time_features + ["cent_0", "flx_0", "rlf_0"] + mfcc_features + chroma_features + ["eoe"]
+    nFeatures = nTimeFeatures * channels + 3 + 13 + 12 + 1  # 13 Mel-Frequency Cepstral Coefficients & 12-sized Chroma Vector & 1 EOE-Value
     results = pd.DataFrame(np.zeros(shape=(int(math.ceil(nSamples / winSize)), nFeatures)), columns=features)
-
-    '''
-    Gain hat Defaultwert von 1.0, wird hier verwendet, da sonst alle Werte 0.0 sind. Warum ??
-    Direkt das Eingangssignal: Nur jeweils die Daten des aktuellen Windows ( Laenge = winSize),
-    daher liefert control2array(net,"SoundFileSource/src/mrs_realvec/processedData") einen 512-Array
-
-    CSV-Sink: Daten aller Frames werden konkateniert und am Ende gesammelt in CSV geschrieben,
-    daher liefert die Serie mit CsvSink einen 5632-Array (winSize * frame_num+1)
-    '''
 
     notempty = net.getControl("SoundFileSource/src/mrs_bool/hasData")
     i = 0
 
     while notempty.to_bool():
         net.tick()
-        results.iloc[i] = realvec2array(net.getControl("mrs_realvec/processedData").to_realvec()).reshape(1, -1)[0][
-                          :nFeatures]
+        res = realvec2array(net.getControl("mrs_realvec/processedData").to_realvec())
+
+        results.iloc[i, :nFeatures - 1] = concatenate([res[0, winSize:], res[1, winSize:winSize + 2]])
+        results.iloc[i]["eoe"] = entropy_of_energy(res[:, :winSize])
         i += 1
+        utils.progress(i / nWindows*100)
+    utils.endProgress()
 
     mean = results.mean()
     std = results.std()
@@ -166,7 +197,8 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
             'chr_9': mean[30], 'chr_9_std': std[30],
             'chr_10': mean[31], 'chr_10_std': std[31],
             'chr_11': mean[32], 'chr_11_std': std[32],
-            'acr_lag': mean[33], 'acr_lag_std': std[33]
+            'acr_lag': mean[33], 'acr_lag_std': std[33],
+            'eoe': mean[34], 'eoe_std': std[34]
         }
     else:
         res = {
@@ -203,8 +235,10 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
             'chr_9': mean[35], 'chr_9_std': std[35],
             'chr_10': mean[36], 'chr_10_std': std[36],
             'chr_11': mean[37], 'chr_11_std': std[37],
-            'acr_lag': np.mean((mean[38], mean[39])), 'acr_lag_std': np.mean((std[38], std[39]))
+            'acr_lag': np.mean((mean[38], mean[39])), 'acr_lag_std': np.mean((std[38], std[39])),
+            'eoe': mean[40], 'eoe_std': std[40]
         }
+
     return res
 
 
@@ -331,14 +365,14 @@ def power(input_filename, winSize=512):
     savefig(img_path)
 
 
-def entropy_of_energy(input_filename, winSize=512, nSubFrames=8):
+def entropy_of_energy_test(input_filename, winSize=512, nSubFrames=8):
     """
     Since marsyas does not provide anything like power-entropy, I had to write the function
     :param input_filename:
     :param winSize:
     :param nSubFrames:
     """
-    print "ZeroCrossings"
+    print "EoE"
     spec = ["Series/zcExtract",
             ["SoundFileSource/src",
              "Gain/gain",
