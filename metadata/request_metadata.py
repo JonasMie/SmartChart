@@ -325,10 +325,13 @@ def getEchonestTrackMetadata(tracks):
         if track_md.echonest_id is None:
             track_md.echonest_id = track.id
 
-        track_md.buffer['length'].append(track.audio_summary['duration'])
-        track_md.buffer['instrumentalness'].append(track.audio_summary['instrumentalness'])
-        track_md.buffer['speechiness'].append(track.audio_summary['speechiness'])
-        # TODO track['song_type']
+        if track.audio_summary['duration'] is not None:
+            track_md.buffer['length'].append(track.audio_summary['duration'])
+        if track.audio_summary['instrumentalness'] is not None:
+            track_md.buffer['instrumentalness'].append(track.audio_summary['instrumentalness'])
+        if track.audio_summary['speechiness'] is not None:
+            track_md.buffer['speechiness'].append(track.audio_summary['speechiness'])
+            # TODO track['song_type']
 
 
 def getEchonestArtistMetadata(artist):
