@@ -27,8 +27,51 @@ class TrackMetadata(MetadataBase):
         self.available_markets = None
         self.available_on_spotify_in_ger = False
 
+        self.is_1980s = None
+        self.is_1990s = None
+        self.is_2000s = None
+        self.is_2010s = None
+        self.is_other_decade = None
+
         self.peakCategory = 7
         self.peakWeeks = 0
+
+    def addYear(self, year):
+        self.year = year
+        if year >= 2010:
+            self.is_2010s = True
+            self.is_2000s = False
+            self.is_1990s = False
+            self.is_1980s = False
+            self.is_other_decade = False
+            return
+        elif year >= 2000:
+            self.is_2010s = False
+            self.is_2000s = True
+            self.is_1990s = False
+            self.is_1980s = False
+            self.is_other_decade = False
+            return
+        elif year >= 1990:
+            self.is_2010s = False
+            self.is_2000s = False
+            self.is_1990s = True
+            self.is_1980s = False
+            self.is_other_decade = False
+            return
+        elif year >= 1980:
+            self.is_2010s = False
+            self.is_2000s = False
+            self.is_1990s = False
+            self.is_1980s = True
+            self.is_other_decade = False
+            return
+        else:
+            self.is_2010s = False
+            self.is_2000s = False
+            self.is_1990s = False
+            self.is_1980s = False
+            self.is_other_decade = True
 
     def setSpotifyMarkets(self, markets):
         if 'DE' in markets:
@@ -38,6 +81,7 @@ class TrackMetadata(MetadataBase):
     def addChartData(self, chartData):
         self.peakCategory = chartData["target_peak_cat"]
         self.peakWeeks = chartData["target_peak_weeks"]
+
     def getData(self):
         return {
             'name': self.name,
@@ -48,6 +92,11 @@ class TrackMetadata(MetadataBase):
             'speechiness': self.speechiness,
             'available_markets': self.available_markets,
             'year': self.year,
+            'is_2010s': self.is_2010s,
+            'is_2000s': self.is_2000s,
+            'is_1990s': self.is_1990s,
+            'is_1980s': self.is_1980s,
+            'is_other_decade': self.is_other_decade,
             'exists_remix': self.exists_remix,
             'available_on_spotify_in_ger': self.available_on_spotify_in_ger,
             'genre_electronic': self.genre_electronic,

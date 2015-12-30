@@ -63,12 +63,16 @@ def collectData(fileList, tracks_found):
             if saveTrack:
                 track_mir = marsyas_analyse(track[0])
                 c.execute(
-                        'INSERT INTO track (name, clean_name, artist_id, musicbrainz_id, discogs_id, lastfm_id,echonest_id, spotify_id, genre_electronic, genre_pop, genre_hiphop, genre_rock, genre_country, genre_jazz, genre_soul, genre_other, year, length, available_markets, available_on_spotify_in_ger, exists_remix, instrumentalness, speechiness, date, zcr, zcr_std, nrg, nrg_std,pow, pow_std,acr, acr_std,acr_lag, acr_lag_std,amdf,amdf_std, eoe, eoe_std, eoe_min,cent,cent_std,flx,flx_std,rlf,rlf_std, mfcc_0,mfcc_0_std,mfcc_1, mfcc_1_std,mfcc_2, mfcc_2_std, mfcc_3, mfcc_3_std,mfcc_4, mfcc_4_std,mfcc_5,mfcc_5_std,mfcc_6,mfcc_6_std,mfcc_7,mfcc_7_std,mfcc_8,mfcc_8_std,mfcc_9,mfcc_9_std,mfcc_10,mfcc_10_std,mfcc_11,mfcc_11_std,mfcc_12,mfcc_12_std, chr_0,chr_0_std,chr_1,chr_1_std,chr_2,chr_2_std,chr_3,chr_3_std,chr_4,chr_4_std,chr_5,chr_5_std,chr_6,chr_6_std,chr_7,chr_7_std,chr_8,chr_8_std,chr_9,chr_9_std,chr_10,chr_10_std,chr_11, chr_11_std,peak_cat, peak_weeks, error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                        'INSERT INTO track (name, clean_name, artist_id, musicbrainz_id, discogs_id, lastfm_id,echonest_id, spotify_id, genre_electronic, genre_pop, genre_hiphop, genre_rock, genre_country, genre_jazz, genre_soul, genre_other, year, is_2010s, is_2000s, is_1990s, is_1980s, is_other_decade, length, available_markets, available_on_spotify_in_ger, exists_remix, instrumentalness, speechiness, date, zcr, zcr_std, nrg, nrg_std,pow, pow_std,acr, acr_std,acr_lag, acr_lag_std,amdf,amdf_std, eoe, eoe_std, eoe_min,cent,cent_std,flx,flx_std,rlf,rlf_std, mfcc_0,mfcc_0_std,mfcc_1, mfcc_1_std,mfcc_2, mfcc_2_std, mfcc_3, mfcc_3_std,mfcc_4, mfcc_4_std,mfcc_5,mfcc_5_std,mfcc_6,mfcc_6_std,mfcc_7,mfcc_7_std,mfcc_8,mfcc_8_std,mfcc_9,mfcc_9_std,mfcc_10,mfcc_10_std,mfcc_11,mfcc_11_std,mfcc_12,mfcc_12_std, chr_0,chr_0_std,chr_1,chr_1_std,chr_2,chr_2_std,chr_3,chr_3_std,chr_4,chr_4_std,chr_5,chr_5_std,chr_6,chr_6_std,chr_7,chr_7_std,chr_8,chr_8_std,chr_9,chr_9_std,chr_10,chr_10_std,chr_11, chr_11_std,peak_cat, peak_weeks, error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                         (track_md.name, track_md.clean_name, artist_id, track_md.musicbrainz_id, track_md.discogs_id,
                          track_md.lastfm_id, track_md.echonest_id, track_md.spotify_id, track_md.genre_electronic,
                          track_md.genre_pop, track_md.genre_hiphop, track_md.genre_rock, track_md.genre_country,
                          track_md.genre_jazz,
-                         track_md.genre_soul, track_md.genre_other, track_md.year, track_md.length,
+                         track_md.genre_soul, track_md.genre_other,
+                         track_md.year,
+                         track_md.is_2010s, track_md.is_2000s, track_md.is_1990s, track_md.is_1980s,
+                         track_md.is_other_decade,
+                         track_md.length,
                          track_md.available_markets,
                          track_md.available_on_spotify_in_ger, track_md.exists_remix, track_md.instrumentalness,
                          track_md.speechiness, time.time(),

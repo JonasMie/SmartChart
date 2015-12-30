@@ -248,7 +248,7 @@ def getDiscogsTrackMetadata(release, track):
         track_md.addLabel({'name': label.name, 'release_count': label.releases.count},
                           parent_label=parent_label,
                           sublabels=len(label.sublabels))
-    track_md.year = release.data['year']
+    track_md.addYear(release.data['year'])
 
 
 def getDiscogsArtistMetadata(artist):
