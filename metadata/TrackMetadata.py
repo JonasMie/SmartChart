@@ -33,7 +33,7 @@ class TrackMetadata(MetadataBase):
         self.is_2010s = None
         self.is_other_decade = None
 
-        self.peakCategory = 7
+        self.peakCategory = 0
         self.peakWeeks = 0
 
     def addYear(self, year):

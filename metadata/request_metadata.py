@@ -46,7 +46,7 @@ CAT3 = 3
 CAT4 = 4
 CAT5 = 5
 CAT6 = 6
-CAT7 = 7
+CAT0 = 0
 
 
 def getMusicbrainzTrackMetadata(recording_list, exists_remix):
@@ -229,6 +229,8 @@ def getMusicbrainzMetadata(track, search_artist=True):
         tries += 1
         track_md.error = True
         print colored("| The Musicbrainz service seems to be not available right now...", 'red')
+    except musicbrainzngs.musicbrainz.ResponseError:    # Todo
+        track_md.error = True
 
 
 def getDiscogsTrackMetadata(release, track):
@@ -398,7 +400,7 @@ def getEchonestMetadata(track, search_artist=True):
 
 def getLastfmTrackMetadata(recording):
     try:
-        track_md.lastfm_id = recording.get_id()
+        track_md.lastfm_id = 1  # recording.get_id()
         for tag in recording.get_top_tags():
             track_md.addTag(tag.item.name, tag.weight)
         if recording.get_duration() > 0:
@@ -429,13 +431,15 @@ def getLastfmMetadata(track, search_artist=True):
 
 def getSpotifyTrackMetadata(possible_tracks):
     for track in possible_tracks:
+        track_md.spotify_id = 1
         track_md.setSpotifyMarkets(track['available_markets'])
         track_md.buffer['length'].append(track['duration_ms'] / 1000)
 
 
 def getSpotifyArtistMetadata(artist):
     artist_md.spotify_id = artist['id']
-    artist_md.buffer['followers'].append(artist['followers']['total'])
+    if artist['followers']['total'] is not None:
+        artist_md.buffer['followers'].append(artist['followers']['total'])
     if artist_md.genre_other is None or artist_md.genre_other:
         artist_md.addGenres(artist['genres'])
 
@@ -485,7 +489,7 @@ def getPeakCategory(peak):
     elif peak < 101:
         return CAT6
     else:
-        return CAT7
+        return CAT0
 
 
 def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
@@ -508,7 +512,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
         total_chart_weeks = 0
         mean_chart_weeks = []
         mean_chart_peak = []
-        target_peak_cat = CAT7
+        target_peak_cat = CAT0
         target_peak_weeks = 0
         target_url = None
 
@@ -566,7 +570,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
 
         if searchArtist:
             mean_chart_weeks = np.mean(mean_chart_weeks) if len(mean_chart_weeks) > 0 else 0
-            mean_chart_peak = getPeakCategory(np.mean(mean_chart_peak)) if len(mean_chart_peak) > 0 else CAT7
+            mean_chart_peak = getPeakCategory(np.mean(mean_chart_peak)) if len(mean_chart_peak) > 0 else CAT0
             track_results['artist_md'] = {'dist_chart_peak': dist_chart_peak, 'total_chart_weeks': total_chart_weeks,
                                           'mean_chart_weeks': mean_chart_weeks, 'mean_chart_peak': mean_chart_peak}
         track_results['target_peak_cat'] = target_peak_cat
