@@ -24,15 +24,15 @@ all_genres = {
         "garage",
         "heavymetal", "metal", "deathmetal", "poprock", "punk", "punkrock",
     ],
-    "soul": [
-        "rnb", "rb", "soul", "funk", "disco",
-    ],
-    "jazz": [
-        "jazz", "boogiewoogie", "bossanova", "jazzblues", "swing"
-    ],
-    "country": [
-        "country", "texas", "texascountry", "bluegrass", "nashwille", "western"
-    ],
+    # "soul": [
+    #     "rnb", "rb", "soul", "funk", "disco",
+    # ],
+    # "jazz": [
+    #     "jazz", "boogiewoogie", "bossanova", "jazzblues", "swing"
+    # ],
+    # "country": [
+    #     "country", "texas", "texascountry", "bluegrass", "nashwille", "western"
+    # ],
     # "Avant-garde": ["experimental", "experimentalmusic", "noise", "electroacoustic", "lo-fi"],
     # "Blues": ["blues"],
     # "caribbean": [
@@ -55,9 +55,9 @@ class MetadataBase:
         self.genre_pop = None
         self.genre_hiphop = None
         self.genre_rock = None
-        self.genre_soul = None
-        self.genre_jazz = None
-        self.genre_country = None
+        # self.genre_soul = None
+        # self.genre_jazz = None
+        # self.genre_country = None
         self.genre_other = None
 
         self.error = False
