@@ -229,7 +229,7 @@ def getMusicbrainzMetadata(track, search_artist=True):
         tries += 1
         track_md.error = True
         print colored("| The Musicbrainz service seems to be not available right now...", 'red')
-    except musicbrainzngs.musicbrainz.ResponseError:    # Todo
+    except musicbrainzngs.musicbrainz.ResponseError:  # Todo
         track_md.error = True
 
 
@@ -510,8 +510,11 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
         track_results = {}
         dist_chart_peak = {CAT1: 0, CAT2: 0, CAT3: 0, CAT4: 0, CAT5: 0, CAT6: 0}
         total_chart_weeks = 0
+        total_albums_chart_weeks = 0
         mean_chart_weeks = []
+        mean_albums_chart_weeks = []
         mean_chart_peak = []
+        mean_albums_chart_peak = []
         target_peak_cat = CAT0
         target_peak_weeks = 0
         target_url = None
@@ -523,38 +526,41 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
         Get the table with the search results
         We only have to continue if there are any results
         '''
-        charts = parsed_search.find('table', class_='chart-table')
-        if charts is not None:
-            '''
-            Get all table rows except the first one ("x Treffer in der Kategorie 'Single'")
-            Then iterate through all rows
-            '''
-            charts = charts.find_all('tr', {'class': ''})
-            for chart in charts:
+        singles_table = parsed_search.find('div', {"id": 'searchtab-0', "class": 'active'})
+        if singles_table is not None:
+            charts = singles_table.find('table', class_='chart-table')
+            if charts is not None:
                 '''
-                Check if the artist of the song matches the target artist
+                Get all table rows except the first one ("x Treffer in der Kategorie 'Single'")
+                Then iterate through all rows
                 '''
-                if track[0] in chart.findChildren()[2].previousSibling.strip().lower():
+                charts = charts.find_all('tr', {'class': ''})
+                for chart in charts:
                     '''
-                    Get the chart data of the song ("Wochen: X Peak: Y")
+                    Check if the artist of the song matches the target artist
                     '''
-                    chart_data = chart.findChildren()[6].text.split()
-                    weeks = int(chart_data[1])
-                    peak = int(chart_data[3])
-                    if searchArtist:
+                    if track[0] in chart.findChildren()[
+                        2].previousSibling.strip().lower():  # TODO: offiziellecharts.de filters out all featuring data
                         '''
-                        Get the relevant data:
+                        Get the chart data of the song ("Wochen: X Peak: Y")
+                        '''
+                        chart_data = chart.findChildren()[6].text.split()
+                        weeks = int(chart_data[1])
+                        peak = int(chart_data[3])
+                        if searchArtist:
+                            '''
+                            Get the relevant data:
 
 
-                        dist_chart_peak:    the distribution of all the artist's chart songs corresponding to their target category
-                        total_chart_weeks:  for how many weeks the artist has been in the charts with all of his songs in total
-                        mean_chart_weeks:   mean chart position for all of the artist's songs in the charts
-                        mean_chart_peak:    mean peak position for all of the artist's songs in the charts
-                        '''
-                        dist_chart_peak[getPeakCategory(peak)] += 1
-                        total_chart_weeks += weeks
-                        mean_chart_weeks.append(weeks)
-                        mean_chart_peak.append(peak)
+                            dist_chart_peak:    the distribution of all the artist's chart songs corresponding to their target category
+                            total_chart_weeks:  for how many weeks the artist has been in the charts with all of his songs in total
+                            mean_chart_weeks:   mean chart position for all of the artist's songs in the charts
+                            mean_chart_peak:    mean peak position for all of the artist's songs in the charts
+                            '''
+                            dist_chart_peak[getPeakCategory(peak)] += 1
+                            total_chart_weeks += weeks
+                            mean_chart_weeks.append(weeks)
+                            mean_chart_peak.append(peak)
 
                     '''
                     if the current track equals the searched track, then get its peak category and save its detail url
@@ -567,12 +573,48 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
                         target_url = a['href']
                         if not searchArtist:
                             break
+        if searchArtist:
+            albums_table = parsed_search.find('div', {"id": 'searchtab-1'})
+            if albums_table is None:
+                albums_table = parsed_search.find('div', {"id": 'searchtab-0', "class": 'tab-pane'})
+            if albums_table is not None:
+                albums_charts = albums_table.find('table', class_='chart-table')
+                if albums_charts is not None:
+                    '''
+                    Get all table rows except the first one ("x Treffer in der Kategorie 'Single'")
+                    Then iterate through all rows
+                    '''
+                    albums_charts = albums_charts.find_all('tr', {'class': ''})
+                    for album_chart in albums_charts:
+                        '''
+                        Check if the artist of the song matches the target artist
+                        '''
+                        if track[0] in album_chart.findChildren()[
+                            2].previousSibling.strip().lower():  # TODO: offiziellecharts.de filters out all featuring data
+                            '''
+                            Get the chart data of the song ("Wochen: X Peak: Y")
+                            '''
+                            album_chart_data = album_chart.findChildren()[6].text.split()
+                            weeks = int(album_chart_data[1])
+                            peak = int(album_chart_data[3])
+
+                            # dist_chart_peak[getPeakCategory(peak)] += 1
+                            total_albums_chart_weeks += weeks
+                            mean_albums_chart_weeks.append(weeks)
+                            mean_albums_chart_peak.append(peak)
 
         if searchArtist:
             mean_chart_weeks = np.mean(mean_chart_weeks) if len(mean_chart_weeks) > 0 else 0
             mean_chart_peak = getPeakCategory(np.mean(mean_chart_peak)) if len(mean_chart_peak) > 0 else CAT0
+
+            mean_album_chart_weeks = np.mean(mean_albums_chart_weeks) if len(mean_albums_chart_weeks) > 0 else 0
+            mean_album_chart_peak = getPeakCategory(np.mean(mean_albums_chart_peak)) if len(
+                    mean_albums_chart_peak) > 0 else CAT0
             track_results['artist_md'] = {'dist_chart_peak': dist_chart_peak, 'total_chart_weeks': total_chart_weeks,
-                                          'mean_chart_weeks': mean_chart_weeks, 'mean_chart_peak': mean_chart_peak}
+                                          'mean_chart_weeks': mean_chart_weeks, 'mean_chart_peak': mean_chart_peak,
+                                          'total_album_chart_weeks': total_albums_chart_weeks,
+                                          'mean_album_chart_weeks': mean_album_chart_weeks,
+                                          'mean_album_chart_peak': mean_album_chart_peak}
         track_results['target_peak_cat'] = target_peak_cat
         track_results['target_peak_weeks'] = target_peak_weeks
         track_results['target_url'] = target_url

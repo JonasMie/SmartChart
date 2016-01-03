@@ -57,6 +57,7 @@ def collectData(fileList, tracks_found):
                          artist_md.play_count, artist_md.recording_count, artist_md.release_count, artist_md.work_count,
                          artist_md.popularity, artist_md.news, artist_md.meanChartPeak,
                          artist_md.meanChartWeeks, artist_md.totalChartWeeks,
+                         artist_md.meanAlbumChartPeak, artist_md.meanAlbumChartWeeks, artist_md.totalAlbumChartWeeks,
                          artist_md.musicbrainz_id, artist_md.discogs_id, artist_md.lastfm_id, artist_md.echonest_id,
                          artist_md.spotify_id, artist_md.error))
                 artist_id = c.lastrowid

@@ -58,6 +58,9 @@ class ArtistMetadata(MetadataBase):
         self.totalChartWeeks = 0
         self.meanChartWeeks = 0
         self.meanChartPeak = 0
+        self.totalAlbumChartWeeks = 0
+        self.meanAlbumChartWeeks = 0
+        self.meanAlbumChartPeak = 0
 
     def addLanguage(self, lang):
         if lang == 'eng':
@@ -99,6 +102,9 @@ class ArtistMetadata(MetadataBase):
         self.totalChartWeeks = chartData['artist_md']['total_chart_weeks']
         self.meanChartWeeks = chartData['artist_md']['mean_chart_weeks']
         self.meanChartPeak = chartData['artist_md']['mean_chart_peak']
+        self.totalAlbumChartWeeks = chartData['artist_md']['total_album_chart_weeks']
+        self.meanAlbumChartWeeks = chartData['artist_md']['mean_album_chart_weeks']
+        self.meanAlbumChartPeak = chartData['artist_md']['mean_album_chart_peak']
 
     def getData(self):
         return {
@@ -134,6 +140,9 @@ class ArtistMetadata(MetadataBase):
             'totalChartWeeks': self.totalChartWeeks,
             'meanChartWeeks': self.meanChartWeeks,
             'meanChartPeak': self.meanChartPeak,
+            'totalAlbumChartWeeks': self.totalAlbumChartWeeks,
+            'meanAlbumChartWeeks': self.meanAlbumChartWeeks,
+            'meanAlbumChartPeak': self.meanAlbumChartPeak,
             'musicbrainz_id': self.musicbrainz_id,
             'discogs_id': self.discogs_id,
             'lastfm_id': self.lastfm_id,
