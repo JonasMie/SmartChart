@@ -136,7 +136,7 @@ if __name__ == "__main__":
             collectData(fileList, 16366)
         elif job == "fix":
             fixData(fileList)
-    if job == "train":
+    elif job == "train":
         if method == "net":
             pass
         elif method == "tree":
@@ -160,7 +160,7 @@ if __name__ == "__main__":
                     plot_path = os.path.join('learning', 'tree', 'plots',
                                              "{}_{}_{}.png".format(int(time.time()), size, ratio))
                 plot(clf, feature_names, config.class_names[0], plot_path)
-    if job == "predict":
+    elif job == "predict":
         if method == "net":
             pass
         elif method == "tree":
@@ -178,3 +178,8 @@ if __name__ == "__main__":
             clf = joblib.load(pickle_file)
             data = getPredictionData(3081)
             print decisionTree.predict(clf, data)
+    elif job == "selection":
+        X, y = getData(300)
+        feature_names = X.columns
+        X = impute(X)
+        decisionTree.tree_feat_sel(X, y, feature_names)
