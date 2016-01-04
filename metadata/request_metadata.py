@@ -500,6 +500,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
     :return: list
     """
 
+    print "| Searching for peak position..."
     results = []
     for track in tracklist:
         '''
@@ -656,7 +657,6 @@ def getMetadata(file, artistName, search_artist):
 
     print "|"
 
-    print "| Searching for peak position..."
     chartData = getPeakPosition([[track[0], track[1]]], searchArtist=search_artist)[0]
     track_md.addChartData(chartData)
     if search_artist:

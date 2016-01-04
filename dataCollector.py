@@ -4,7 +4,7 @@ import sqlite3
 
 import time
 from termcolor import colored
-from metadata.request_metadata import getMetadata
+from metadata.request_metadata import getMetadata, getPeakPosition
 from MIR.mir import marsyas_analyse
 import utils
 
@@ -129,20 +129,45 @@ def fixData(files):
     errors = True
     c = conn.cursor()
     while errors:
-        c.execute("SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error != 0")
+        c.execute(
+                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id")  # WHERE track.error != 0 OR artist.error != 0")
         error_data = c.fetchall()
+        artist_id = None
         for data in error_data:
             errors = False
             track_mir = None
-            track_md, artist_md = getMetadata(data[1], data[105], search_artist=True)
-            if None in data[28:98]:
-                track_mir = marsyas_analyse(files[data[105][1]])
+            track_md = None
+            artist_md = None
+            # if track and artist are error-free, just request the chart data
+            if data[27] == 0 and data[135] == 0 and None in data[25:27]:
+                searchArtist = artist_id != data[104]
+                chart_data = getPeakPosition([[data[105], data[1]]], searchArtist=searchArtist)[0]
+                c.execute('UPDATE track SET peak_cat=?, peak_weeks=? WHERE track.id = ?',
+                          (chart_data['target_peak_cat'], chart_data['target_peak_weeks'], data[0]))
+                if searchArtist:
+                    c.execute(
+                            'UPDATE artist SET mean_chart_peak=?, mean_chart_weeks=?,total_chart_weeks=?, mean_album_chart_peak=?, mean_album_chart_weeks=?, total_album_chart_weeks=? WHERE id=?',
+                            (chart_data['artist_md']['mean_chart_peak'], chart_data['artist_md']['mean_chart_weeks'],
+                             chart_data['artist_md']['total_chart_weeks'],
+                             chart_data['artist_md']['mean_album_chart_peak'],
+                             chart_data['artist_md']['mean_album_chart_weeks'],
+                             chart_data['artist_md']['total_album_chart_weeks'], data[104]))
+
+            elif data[27] != 0 or data[135] != 0:
+                track_md, artist_md = getMetadata(data[1], data[105], search_artist=artist_id != data[104])
             if track_md.error or artist_md.error:
                 errors = True
-                continue
-            else:
+                    track_md = None
+                    artist_md = None
+            if None in data[28:99]:
+                for file in files[data[105]]:
+                    if file[1] == data[1]:
+                        path = file[0]
+                        break
+                track_mir = marsyas_analyse(path)
+            if track_md is not None and artist_md is not None:
                 c.execute(
-                        'UPDATE artist SET name=?,clean_name=?,is_male=?,is_female=?,is_group=?,german=?,american=?,other_country=?,total_years=?,breaking_years=?,life_span=?,genre_electronic=?,genre_pop=?,genre_hiphop=?,genre_rock=?,genre_other=?,followers=?,listener=?,play_count=?,recordings=?,releases=?,works=?,popularity=?,news=?,mean_chart_peak=?, mean_chart_weeks=?,total_chart_weeks=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?, echonest_id=?, spotify_id=?,error=? WHERE id=?',
+                        'UPDATE artist SET name=?,clean_name=?,is_male=?,is_female=?,is_group=?,german=?,american=?,other_country=?,total_years=?,breaking_years=?,life_span=?,genre_electronic=?,genre_pop=?,genre_hiphop=?,genre_rock=?,genre_other=?,followers=?,listener=?,play_count=?,recordings=?,releases=?,works=?,popularity=?,news=?,mean_chart_peak=?, mean_chart_weeks=?,total_chart_weeks=?, mean_album_chart_peak=?, mean_album_chart_weeks=?, total_album_chart_weeks=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?, echonest_id=?, spotify_id=?,error=? WHERE id=?',
                         (artist_md.name, artist_md.clean_name, artist_md.is_male, artist_md.is_female,
                          artist_md.is_group, artist_md.is_german, artist_md.is_american, artist_md.is_other_country,
                          artist_md.total_years, artist_md.breaking_years, artist_md.life_span,
@@ -153,11 +178,12 @@ def fixData(files):
                          artist_md.play_count, artist_md.recording_count, artist_md.release_count, artist_md.work_count,
                          artist_md.popularity, artist_md.news, artist_md.meanChartPeak,
                          artist_md.meanChartWeeks, artist_md.totalChartWeeks,
+                         artist_md.meanAlbumChartPeak, artist_md.meanAlbumChartWeeks, artist_md.totalAlbumChartWeeks,
                          artist_md.musicbrainz_id, artist_md.discogs_id, artist_md.lastfm_id, artist_md.echonest_id,
                          artist_md.spotify_id, artist_md.error, data[104]))
-                if track_mir is not None:
+
                     c.execute(
-                            'UPDATE track SET name=?, clean_name=?, artist_id=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?,echonest_id=?, spotify_id=?, genre_electronic=?, genre_pop=?, genre_hiphop=?, genre_rock=?, genre_other=?, year=?, is_2010s=?, is_2000s=?, is_1990s=?, is_1980s=?, is_other_decade=?, length=?, available_markets=?, available_on_spotify_in_ger=?, exists_remix=?, instrumentalness=?, speechiness=?, date=?, zcr=?, zcr_std=?, nrg=?, nrg_std=?,pow=?, pow_std=?,acr=?, acr_std=?,acr_lag=?, acr_lag_std=?,amdf=?,amdf_std=?, eoe=?, eoe_std=?, eoe_min=?,cent=?,cent_std=?,flx=?,flx_std=?,rlf=?,rlf_std=?, mfcc_0=?,mfcc_0_std=?,mfcc_1=?, mfcc_1_std=?,mfcc_2=?, mfcc_2_std=?, mfcc_3=?, mfcc_3_std=?,mfcc_4=?, mfcc_4_std=?,mfcc_5=?,mfcc_5_std=?,mfcc_6=?,mfcc_6_std=?,mfcc_7=?,mfcc_7_std=?,mfcc_8=?,mfcc_8_std=?,mfcc_9=?,mfcc_9_std=?,mfcc_10=?,mfcc_10_std=?,mfcc_11=?,mfcc_11_std=?,mfcc_12=?,mfcc_12_std=?, chr_0=?,chr_0_std=?,chr_1=?,chr_1_std=?,chr_2=?,chr_2_std=?,chr_3=?,chr_3_std=?,chr_4=?,chr_4_std=?,chr_5=?,chr_5_std=?,chr_6=?,chr_6_std=?,chr_7=?,chr_7_std=?,chr_8=?,chr_8_std=?,chr_9=?,chr_9_std=?,chr_10=?,chr_10_std=?,chr_11=?, chr_11_std=?,peak_cat=?, peak_weeks=?, error=? WHERE id=?',
+                        'UPDATE track SET name=?, clean_name=?, artist_id=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?,echonest_id=?, spotify_id=?, genre_electronic=?, genre_pop=?, genre_hiphop=?, genre_rock=?, genre_other=?, year=?, is_2010s=?, is_2000s=?, is_1990s=?, is_1980s=?, is_other_decade=?, length=?, available_markets=?, available_on_spotify_in_ger=?, exists_remix=?, instrumentalness=?, speechiness=?, date=?, peak_cat=?, peak_weeks=?, error=? WHERE id=?',
                             (
                                 track_md.name, track_md.clean_name, data[104], track_md.musicbrainz_id,
                                 track_md.discogs_id,
@@ -173,6 +199,13 @@ def fixData(files):
                                 track_md.available_markets,
                                 track_md.available_on_spotify_in_ger, track_md.exists_remix, track_md.instrumentalness,
                                 track_md.speechiness, time.time(),
+                            track_md.peakCategory, track_md.peakWeeks,
+                            track_md.error, data[0]))
+
+            if track_mir is not None:
+                c.execute(
+                        'UPDATE track SET zcr=?, zcr_std=?, nrg=?, nrg_std=?,pow=?, pow_std=?,acr=?, acr_std=?,acr_lag=?, acr_lag_std=?,amdf=?,amdf_std=?, eoe=?, eoe_std=?, eoe_min=?,cent=?,cent_std=?,flx=?,flx_std=?,rlf=?,rlf_std=?, mfcc_0=?,mfcc_0_std=?,mfcc_1=?, mfcc_1_std=?,mfcc_2=?, mfcc_2_std=?, mfcc_3=?, mfcc_3_std=?,mfcc_4=?, mfcc_4_std=?,mfcc_5=?,mfcc_5_std=?,mfcc_6=?,mfcc_6_std=?,mfcc_7=?,mfcc_7_std=?,mfcc_8=?,mfcc_8_std=?,mfcc_9=?,mfcc_9_std=?,mfcc_10=?,mfcc_10_std=?,mfcc_11=?,mfcc_11_std=?,mfcc_12=?,mfcc_12_std=?, chr_0=?,chr_0_std=?,chr_1=?,chr_1_std=?,chr_2=?,chr_2_std=?,chr_3=?,chr_3_std=?,chr_4=?,chr_4_std=?,chr_5=?,chr_5_std=?,chr_6=?,chr_6_std=?,chr_7=?,chr_7_std=?,chr_8=?,chr_8_std=?,chr_9=?,chr_9_std=?,chr_10=?,chr_10_std=?,chr_11=?, chr_11_std=? WHERE id=?',
+                        (
                                 track_mir['zcr'], track_mir['zcr_std'],
                                 track_mir['nrg'], track_mir['nrg_std'],
                                 track_mir['pow'], track_mir['pow_std'],
@@ -208,25 +241,7 @@ def fixData(files):
                                 track_mir['chr_9'], track_mir['chr_9_std'],
                                 track_mir['chr_10'], track_mir['chr_10_std'],
                                 track_mir['chr_11'], track_mir['chr_11_std'],
-                                track_md.peakCategory, track_md.peakWeeks,
-                                track_md.error, data[0]))
-                else:
-                    c.execute(
-                            'UPDATE track SET name=?, clean_name=?, artist_id=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?,echonest_id=?, spotify_id=?, genre_electronic=?, genre_pop=?, genre_hiphop=?, genre_rock=?, genre_other=?, year=?, is_2010s=?, is_2000s=?, is_1990s=?, is_1980s=?, is_other_decade=?, length=?, available_markets=?, available_on_spotify_in_ger=?, exists_remix=?, instrumentalness=?, speechiness=?, date=?, peak_cat=?, peak_weeks=?, error=? WHERE id=?',
-                            (
-                                track_md.name, track_md.clean_name, data[104], track_md.musicbrainz_id,
-                                track_md.discogs_id,
-                                track_md.lastfm_id, track_md.echonest_id, track_md.spotify_id,
-                                track_md.genre_electronic,
-                                track_md.genre_pop, track_md.genre_hiphop, track_md.genre_rock,
-                                # track_md.genre_country,track_md.genre_jazz,track_md.genre_soul,
-                                track_md.genre_other,
-                                track_md.year,
-                                track_md.is_2010s, track_md.is_2000s, track_md.is_1990s, track_md.is_1980s,
-                                track_md.is_other_decade,
-                                track_md.length,
-                                track_md.available_markets,
-                                track_md.available_on_spotify_in_ger, track_md.exists_remix, track_md.instrumentalness,
-                                track_md.speechiness, time.time(),
-                                track_md.peakCategory, track_md.peakWeeks,
-                                track_md.error, data[0]))
+                            data[0]
+                        ))
+            artist_id = data[104]
+            conn.commit()
