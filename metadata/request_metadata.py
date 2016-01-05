@@ -26,7 +26,7 @@ artist_md = None
 
 MUSICBRAINZ_LIMIT = 25
 MUSICBRAINZ_TAG_BORDER = 0
-DISCOGS_RELEASES_LIMIT = 10  # more would be better, but it's the bottleneck
+DISCOGS_RELEASES_LIMIT = 20
 LASTFM_TAG_WEIGHT_BORDER = 85
 ECHONEST_TAG_WEIGHT_BORDER = .85
 MAX_TRIES = 1
@@ -289,6 +289,7 @@ def getDiscogsMetadata(track, search_artist=True):
     try:
         releases = discogs.search(u"{0}+{1}".format(track[0], track[1]), type="release")
         processed_artist = False
+        checked_releases = 0
         for release in releases:
             '''
             problem: For artists with the same name discogs generates a suffix with the index, e.g. '# TODO: discogs offers a really really REALLY weird search functionality. You never get what you expect to get (if you get anything at all...) Adele', 'Adele (2)', 'Adele (3)',...
@@ -296,6 +297,9 @@ def getDiscogsMetadata(track, search_artist=True):
             The solution is to filter out the suffix using regular expression in order to compare the name from the artist-object with the
             given track artist
             '''
+            checked_releases += 1
+            if checked_releases > DISCOGS_RELEASES_LIMIT:
+                break
             for artist in release.artists:
                 name = re.search("^(.*?)(\s\(\d\))?$", artist.name)
                 if name:
@@ -406,7 +410,7 @@ def getLastfmTrackMetadata(recording):
         if recording.get_duration() > 0:
             track_md.buffer['length'].append(recording.get_duration() / 1000)
     except pylast.MalformedResponseError:
-        track_md.error = True
+        # track_md.error = True
         print colored("| LastFM error...", 'red')
 
 
@@ -425,7 +429,7 @@ def getLastfmMetadata(track, search_artist=True):
             getLastfmArtistsMetadata(recording.get_artist())
         getLastfmTrackMetadata(recording)
     except pylast.WSError, pylast.MalformedResponseError:
-        track_md.error = True
+        # track_md.error = True
         print colored("| LastFM error...", 'red')
 
 
@@ -563,17 +567,17 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
                             mean_chart_weeks.append(weeks)
                             mean_chart_peak.append(peak)
 
-                    '''
-                    if the current track equals the searched track, then get its peak category and save its detail url
-                    (may be interesting for later use)
-                    '''
-                    a = chart.findChildren()[3]
-                    if utils.is_similar(a.text, track[1], normalize=True):
-                        target_peak_cat = getPeakCategory(peak)
-                        target_peak_weeks = weeks
-                        target_url = a['href']
-                        if not searchArtist:
-                            break
+                        '''
+                        if the current track equals the searched track, then get its peak category and save its detail url
+                        (may be interesting for later use)
+                        '''
+                        a = chart.findChildren()[3]
+                        if utils.is_similar(a.text, track[1], normalize=True):
+                            target_peak_cat = getPeakCategory(peak)
+                            target_peak_weeks = weeks
+                            target_url = a['href']
+                            if not searchArtist:
+                                break
         if searchArtist:
             albums_table = parsed_search.find('div', {"id": 'searchtab-1'})
             if albums_table is None:
@@ -624,17 +628,17 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
     return results
 
 
-def getMetadata(file, artistName, search_artist):
+def getMetadata(trackName, artistName, search_artist):
     global track_md, artist_md, tries
     tracks = []
     artists = []
     last_request = 0
-    track_md = TrackMetadata(file[1], artistName)
+    track_md = TrackMetadata(trackName, artistName)
     if search_artist:
         artist_md = ArtistMetadata(artistName)
         artist_md.clean_name = utils.normalizeName(artistName)
 
-    track_md.clean_name = utils.normalizeName(file[1])
+    track_md.clean_name = utils.normalizeName(trackName)
 
     track = [artistName.lower(), track_md.clean_name]
 
