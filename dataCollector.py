@@ -253,7 +253,8 @@ def fixData(files):
                             data[0]
                         ))
                 print colored("| Updated audio features saved", 'green')
-            print colored("| Processed {0}/{1}, {2:.2f}%".format(i, len(error_data), (i / len(error_data))*100), 'blue')
+            print colored("| Processed {0}/{1}, {2:.2f}%".format(i, len(error_data), (i / len(error_data)) * 100),
+                          'blue')
             print "\n-----------------------------\n"
             artist_id = data[104]
             i += 1
