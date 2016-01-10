@@ -133,12 +133,25 @@ if __name__ == "__main__":
             root.destroy()
             fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3"))
         if job == "collect":
-            collectData(fileList, 16366)
+            collectData2(fileList, 16366)
         elif job == "fix":
             fixData(fileList)
     elif job == "train":
         if method == "net":
-            pass
+            if output is None:
+                output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
+                                      "{}_{}_{}.pkl".format(int(time.time())))
+            else:
+                if os.path.isdir(output):
+                    output = os.path.join(output, "{}_{}_{}.pkl".format(size, ratio, time.time()))
+                else:
+                    print output + " is not a valid directory"
+                    sys.exit(2)
+            data, targets = getDecisionData(size, ratio)
+            feature_names = data.columns
+
+            # clf = neuralNetwork.getPipeline().fit() #data, targets.values
+            joblib.dump(clf, output)
         elif method == "tree":
             if output is None:
                 output = os.path.join(os.getcwd(), 'learning', 'tree', 'models',
