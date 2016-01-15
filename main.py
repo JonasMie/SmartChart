@@ -2,6 +2,9 @@
 import Tkinter, tkFileDialog
 import getopt
 import os
+
+import discogs_client
+
 import config
 from mutagen.id3 import ID3
 
@@ -12,6 +15,7 @@ from sklearn.externals import joblib
 
 from learning.utils import *
 from learning.tree import decisionTree
+from learning.nn import neuralNetwork
 
 
 # '''
@@ -192,7 +196,13 @@ if __name__ == "__main__":
             data = getPredictionData(3081)
             print decisionTree.predict(clf, data)
     elif job == "selection":
-        X, y = getData(300)
+        X, y = getData(2000, type="mir")
         feature_names = X.columns
         X = impute(X)
         decisionTree.tree_feat_sel(X, y, feature_names)
+    elif job == "misc":
+        discogs = discogs_client.Client('{0}/{1}'.format(config.name, config.version),
+                                        user_token=config.api_keys['DISCOGS_KEY'])
+        x = discogs.search("eminem")
+        for y in x:
+            print y
