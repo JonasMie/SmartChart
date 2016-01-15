@@ -1,9 +1,9 @@
 from __future__ import division
 
 import pandas as pd
-import time
 from marsyas_util import *
-import os
+from termcolor import colored
+
 import utils
 
 FEATURES_FILE = os.path.join('features', 'mir.csv')
@@ -31,7 +31,7 @@ def entropy_of_energy(signal, winSize=512, nSubFrames=8):
 
 
 def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
-    utils.startProgress("| Analyzing file {}".format(input_filename))
+    utils.startProgress(u"| Analyzing file {}".format(input_filename))
 
     time_domain = [
         "Fanout/timeDomainSeries",
@@ -108,7 +108,7 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
     net = create(spec)
     snet = mar_refs(spec)
     fname = net.getControl(snet['src'] + "/mrs_string/filename")
-    fname.setValue_string(input_filename.encode('ascii'))
+    fname.setValue_string(input_filename.encode('ascii', 'ignore'))
 
     inSamples = net.getControl("mrs_natural/inSamples")
     inSamples.setValue_natural(winSize)
@@ -153,12 +153,55 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
     while notempty.to_bool():
         net.tick()
         res = realvec2array(net.getControl("mrs_realvec/processedData").to_realvec())
-
-        results.iloc[i, :nFeatures - 1] = res[0, winSize:]
+        try:
+            results.iloc[i, :nFeatures - 1] = res[0, winSize:]
+        except IndexError:
+            print colored("Index error, skipping file...", 'red')
+            results = None
+            break
         results.iloc[i]["eoe"] = entropy_of_energy(res[:, :winSize])
         i += 1
         utils.progress(i / nWindows * 100)
     utils.endProgress()
+
+    if results is None:
+        return {
+            'acr': None, 'acr_std': None,
+            'acr_lag': None, 'acr_lag_std': None,
+            'amdf': None, 'amdf_std': None,
+            'zcr': None, 'zcr_std': None,
+            'nrg': None, 'nrg_std': None,
+            'pow': None, 'pow_std': None,
+            'cent': None, 'cent_std': None,
+            'flx': None, 'flx_std': None,
+            'rlf': None, 'rlf_std': None,
+            'mfcc_0': None, 'mfcc_0_std': None,
+            'mfcc_1': None, 'mfcc_1_std': None,
+            'mfcc_2': None, 'mfcc_2_std': None,
+            'mfcc_3': None, 'mfcc_3_std': None,
+            'mfcc_4': None, 'mfcc_4_std': None,
+            'mfcc_5': None, 'mfcc_5_std': None,
+            'mfcc_6': None, 'mfcc_6_std': None,
+            'mfcc_7': None, 'mfcc_7_std': None,
+            'mfcc_8': None, 'mfcc_8_std': None,
+            'mfcc_9': None, 'mfcc_9_std': None,
+            'mfcc_10': None, 'mfcc_10_std': None,
+            'mfcc_11': None, 'mfcc_11_std': None,
+            'mfcc_12': None, 'mfcc_12_std': None,
+            'chr_0': None, 'chr_0_std': None,
+            'chr_1': None, 'chr_1_std': None,
+            'chr_2': None, 'chr_2_std': None,
+            'chr_3': None, 'chr_3_std': None,
+            'chr_4': None, 'chr_4_std': None,
+            'chr_5': None, 'chr_5_std': None,
+            'chr_6': None, 'chr_6_std': None,
+            'chr_7': None, 'chr_7_std': None,
+            'chr_8': None, 'chr_8_std': None,
+            'chr_9': None, 'chr_9_std': None,
+            'chr_10': None, 'chr_10_std': None,
+            'chr_11': None, 'chr_11_std': None,
+            'eoe': None, 'eoe_std': None, 'eoe_min': None
+        }
 
     mean = results.mean()
     std = results.std()

@@ -1,21 +1,19 @@
 # coding=utf-8
-import Tkinter, tkFileDialog
+import Tkinter
 import getopt
+import tkFileDialog
 import os
-
-import discogs_client
-
-import config
 from mutagen.id3 import ID3
-
-from MIR.mir import *
-from dataCollector import *
-from utils import normalizeName
 from sklearn.externals import joblib
 
-from learning.utils import *
+import config
+from MIR.mir import *
+from dataCollector import *
+
 from learning.tree import decisionTree
 from learning.nn import neuralNetwork
+from learning.utils import *
+from utils import normalizeName
 
 
 # '''
@@ -53,24 +51,31 @@ def parseDirectory(directoryName, extensions):
     files = {}
     for subFolderName in os.listdir(directoryName):
         for root, directories, filenames in os.walk(os.path.join(directoryName, subFolderName)):
-            for filename in filenames:
-                if filename.endswith(extensions):  # and MP3(os.path.join(root, filename)).info.channels == 1:
-                    files_found += 1
-                    # if files_found == 11:
-                    # return files, artists_found, files_found
-                    try:
-                        trackName = unicode(ID3(os.path.join(root, filename))["TIT2"].text[0])
-                        id3ArtistName = unicode(ID3(os.path.join(root, filename))['TPE1'].text[0])
-                        id3ArtistNameNorm = unicode(normalizeName(id3ArtistName))
-                    except KeyError:
-                        trackName = unicode(filename.rsplit(".", 1)[0])
-                    if id3ArtistNameNorm not in files:
-                        files[id3ArtistNameNorm] = list()
-                        artists_found += 1
-                    files[id3ArtistNameNorm].append(
-                            (unicode(os.path.join(root, filename)), trackName))
+            if not root.endswith('.AppleDouble'):
+                for filename in filenames:
+                    if filename.endswith(
+                            extensions) and directories != "":  # and MP3(os.path.join(root, filename)).info.channels == 1:
+                        files_found += 1
+                        # if files_found == 11:
+                        # return files, artists_found, files_found
+                        try:
+                            path_ = os.path.join(root, filename)
+                            print path_
+                            trackName = unicode(ID3(path_)["TIT2"].text[0])
+                            id3ArtistName = unicode(ID3(path_)['TPE1'].text[0])
+                            id3ArtistNameNorm = unicode(normalizeName(id3ArtistName))
+                        except KeyError:
+                            trackName = unicode(filename.rsplit(".", 1)[0])
+                        except:
+                            e = sys.exc_info()[0]
+                            print colored(u"Fehler:{}".format(e), 'red')
+                        if id3ArtistNameNorm not in files:
+                            files[id3ArtistNameNorm] = list()
+                            artists_found += 1
+                        files[id3ArtistNameNorm].append(
+                                (unicode(os.path.join(root, filename)), trackName))
 
-    joblib.dump(os.path.join('files', 'files.pkl'))
+    joblib.dump(files, os.path.join('files', 'new_files.pkl'))
     return files, artists_found, files_found
 
 
@@ -128,16 +133,18 @@ if __name__ == "__main__":
     if job == "collect" or job == "fix":
         if pickle_file is not None:
             fileList = joblib.load(pickle_file)
+            tracks_found = sum(len(y) for y in fileList.itervalues())
         elif input_dir is not None:
             fileList, artists_found, tracks_found = parseDirectory(input_dir, ("mp3"))
         else:
             root = Tkinter.Tk()
             root.withdraw()
             dir = tkFileDialog.askdirectory(parent=root, title='Pick a directory')
+            print dir
             root.destroy()
             fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3"))
         if job == "collect":
-            collectData2(fileList, 16366)
+            collectData(fileList, tracks_found)
         elif job == "fix":
             fixData(fileList)
     elif job == "train":
@@ -200,9 +207,5 @@ if __name__ == "__main__":
         feature_names = X.columns
         X = impute(X)
         decisionTree.tree_feat_sel(X, y, feature_names)
-    elif job == "misc":
-        discogs = discogs_client.Client('{0}/{1}'.format(config.name, config.version),
-                                        user_token=config.api_keys['DISCOGS_KEY'])
-        x = discogs.search("eminem")
-        for y in x:
-            print y
+    elif job =="test":
+        check1( fileList = joblib.load("files/new_files.pkl"))

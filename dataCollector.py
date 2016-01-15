@@ -1,12 +1,13 @@
 from __future__ import division
 
 import sqlite3
-
 import time
+
 from termcolor import colored
-from metadata.request_metadata import getMetadata, getPeakPosition
-from MIR.mir import marsyas_analyse
+
 import utils
+from MIR.mir import marsyas_analyse
+from metadata.request_metadata import getMetadata, getPeakPosition
 
 conn = sqlite3.connect('data.db')
 
@@ -46,9 +47,11 @@ def collectData(fileList, tracks_found):
             search_artist = False
 
         for track in tracks:
-            if track[0] == "/Volumes/JONAS IPOD/iPod_Control/Music/F11/TDVZ.mp3" or track[
-                0] == "/Volumes/JONAS IPOD/iPod_Control/Music/F02/HDIX.mp3" \
-                    or track[0] == "/Volumes/JONAS IPOD/iPod_Control/Music/F15/FTYN.mp3":  # TODO: FIX
+            if track[0] in ["/Volumes/JONAS IPOD/iPod_Control/Music/F11/TDVZ.mp3",
+                            "/Volumes/JONAS IPOD/iPod_Control/Music/F02/HDIX.mp3",
+                            "/Volumes/JONAS IPOD/iPod_Control/Music/F15/FTYN.mp3",
+                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Foolik\Unknown Album\Foolik @ Ploetzlich Am Meer Festival.mp3",
+                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Sido\Ich\04 Peilerman & Flow Teil 1.mp3"]:  # TODO: FIX
                 continue
             currTrack += 1
             print colored(u"| => Collecting data for {0} by {1}".format(track[1], artistName), 'blue')
@@ -246,20 +249,19 @@ def fixData(files):
     c = conn.cursor()
     while errors:
         c.execute(
-                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id")  # WHERE track.error != 0 OR artist.error != 0")
-        error_data = c.fetchall()
-        artist_id = None
-        i = 1
-        for data in error_data:
-            print u"| Checking {} by {} (ID {})".format(data[1], data[105], data[0])
+                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error != 0 OR artist.error != 0 OR track.peak_cat ISNULL OR artist.mean_chart_peak ISNULL OR track.eoe ISNULL ")
+        data = c.fetchone()
+        if data is None:
             errors = False
+        else:
+            print u"| Checking {} by {} (ID {})".format(data[1], data[105], data[0])
             track_mir = None
             track_md = None
             artist_md = None
             # if track and artist are error-free, just request the chart data
-            if data[27] == 0 and data[135] == 0 and None in data[25:27]:
+            if data[27] == 0 and data[135] == 0 and (None in data[25:27] or None in data[132:135]):
                 print colored("| No errors, just updating the charts data", 'blue')
-                searchArtist = artist_id != data[104]
+                searchArtist = None in data[132:135]
                 chart_data = getPeakPosition([[data[105], data[1]]], searchArtist=searchArtist)[0]
                 c.execute('UPDATE track SET peak_cat=?, peak_weeks=? WHERE track.id = ?',
                           (chart_data['target_peak_cat'], chart_data['target_peak_weeks'], data[0]))
@@ -275,7 +277,7 @@ def fixData(files):
 
             elif data[27] != 0 or data[135] != 0:
                 print colored("| Errors found, trying to update the whole dataset", 'blue')
-                track_md, artist_md = getMetadata(data[1], data[105], search_artist=artist_id != data[104])
+                track_md, artist_md = getMetadata(data[1], data[105], search_artist=data[135])
                 if track_md.error or (artist_md is not None and artist_md.error):
                     errors = True
                     print colored("| Errors found again, trying again in the next loop", 'red')
@@ -369,9 +371,18 @@ def fixData(files):
                             data[0]
                         ))
                 print colored("| Updated audio features saved", 'green')
-            print colored("| Processed {0}/{1}, {2:.2f}%".format(i, len(error_data), (i / len(error_data)) * 100),
-                          'blue')
+            # print colored("| Processed {0}/{1}, {2:.2f}%".format(i, len(error_data), (i / len(error_data)) * 100),
+            #               'blue')
             print "\n-----------------------------\n"
-            artist_id = data[104]
-            i += 1
             conn.commit()
+
+def check1(fileList):
+    c = conn.cursor()
+    for artist, tracks in fileList.iteritems():
+        for track in tracks:
+            c.execute(
+                    "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.name = ? and artist.name != ? ", ((track[1], artist)))
+            error_data = c.fetchall()
+            if len(error_data)>0:
+                for data in error_data:
+                    print data[0], track[1], data[104],artist

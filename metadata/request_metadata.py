@@ -111,7 +111,11 @@ def getMusicbrainzArtistMetadata(artist):
                 artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'],
                                                         end=artist['life-span']['end'])
             else:
-                artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'])
+                try:
+                    artist_md.life_span = utils.getActivity(start=artist['life-span']['begin'])
+                except ValueError:
+                    print colored("| Date error...", 'red')
+                    artist_md.error = True
 
     '''
     musicbrainz uses a rating based on 5 (0 = bad, 5= good) but I want a float between 0 and 100
