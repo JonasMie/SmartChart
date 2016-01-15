@@ -2,14 +2,16 @@
 import Tkinter
 import getopt
 import tkFileDialog
-
+import os
 from mutagen.id3 import ID3
 from sklearn.externals import joblib
 
 import config
 from MIR.mir import *
 from dataCollector import *
+
 from learning.tree import decisionTree
+from learning.nn import neuralNetwork
 from learning.utils import *
 from utils import normalizeName
 
