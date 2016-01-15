@@ -68,7 +68,7 @@ def is_similar(name1, name2, normalize=False, border=.9):
 
 def startProgress(title):
     global progress_x
-    sys.stdout.write(title + ": \n| [" + "-" * 40 + "]\n|  " + chr(8) * 41)
+    sys.stdout.write(title + ": \n| [" + "-" * 40 + "]\n|  ")
     sys.stdout.flush()
     progress_x = 0
 
