@@ -73,7 +73,7 @@ def parseDirectory(directoryName, extensions):
                         files[id3ArtistNameNorm].append(
                                 (unicode(os.path.join(root, filename)), trackName))
 
-    joblib.dump(files, os.path.join('files', 'new_files.pkl'))
+    # joblib.dump(files, os.path.join('files', 'new_files.pkl'))
     return files, artists_found, files_found
 
 
@@ -201,7 +201,7 @@ if __name__ == "__main__":
             data = getPredictionData(3081)
             print decisionTree.predict(clf, data)
     elif job == "selection":
-        X, y = getData(300)
+        X, y = getData(5000)
         feature_names = X.columns
         X = impute(X)
         decisionTree.tree_feat_sel(X, y, feature_names)

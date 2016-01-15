@@ -1,5 +1,7 @@
+# coding=utf-8
 from __future__ import division
 
+import math
 import sqlite3
 import time
 
@@ -51,7 +53,8 @@ def collectData(fileList, tracks_found):
                             "/Volumes/JONAS IPOD/iPod_Control/Music/F02/HDIX.mp3",
                             "/Volumes/JONAS IPOD/iPod_Control/Music/F15/FTYN.mp3",
                             "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Foolik\Unknown Album\Foolik @ Ploetzlich Am Meer Festival.mp3",
-                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Sido\Ich\04 Peilerman & Flow Teil 1.mp3"]:  # TODO: FIX
+                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Sido\Ich\04 Peilerman & Flow Teil 1.mp3",
+                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\\Filthy Rich & Jørgensen\\Vacant\\Vacant (The Good Guys Remix).mp3"]:  # TODO: FIX
                 continue
             currTrack += 1
             print colored(u"| => Collecting data for {0} by {1}".format(track[1], artistName), 'blue')
@@ -247,9 +250,11 @@ def collectData2(fileList, tracks_found):
 def fixData(files):
     errors = True
     c = conn.cursor()
+    offset = 0
     while errors:
         c.execute(
-                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error != 0 OR artist.error != 0 OR track.peak_cat ISNULL OR artist.mean_chart_peak ISNULL OR track.eoe ISNULL ")
+                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error != 0 OR artist.error != 0 OR track.peak_cat ISNULL OR artist.mean_chart_peak ISNULL OR track.eoe ISNULL LIMIT -1 OFFSET ?",
+                ((offset,)))
         data = c.fetchone()
         if data is None:
             errors = False
@@ -292,6 +297,10 @@ def fixData(files):
                         break
                 if path:
                     track_mir = marsyas_analyse(path)
+                    if track_mir['zcr'] is None or math.isnan(track_mir['zcr']):
+                        print colored("| File seems to be corrupted...", 'red')
+                        track_mir = None
+                        offset += 1
             if artist_md is not None:
                 c.execute(
                         'UPDATE artist SET name=?,clean_name=?,is_male=?,is_female=?,is_group=?,german=?,american=?,other_country=?,total_years=?,breaking_years=?,life_span=?,genre_electronic=?,genre_pop=?,genre_hiphop=?,genre_rock=?,genre_other=?,followers=?,listener=?,play_count=?,recordings=?,releases=?,works=?,popularity=?,news=?,mean_chart_peak=?, mean_chart_weeks=?,total_chart_weeks=?, mean_album_chart_peak=?, mean_album_chart_weeks=?, total_album_chart_weeks=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?, echonest_id=?, spotify_id=?,error=? WHERE id=?',
@@ -376,13 +385,15 @@ def fixData(files):
             print "\n-----------------------------\n"
             conn.commit()
 
+
 def check1(fileList):
     c = conn.cursor()
     for artist, tracks in fileList.iteritems():
         for track in tracks:
             c.execute(
-                    "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.name = ? and artist.name != ? ", ((track[1], artist)))
+                    "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.name = ? AND artist.name != ? ",
+                    ((track[1], artist)))
             error_data = c.fetchall()
-            if len(error_data)>0:
+            if len(error_data) > 0:
                 for data in error_data:
-                    print data[0], track[1], data[104],artist
+                    print data[0], track[1], data[104], artist
