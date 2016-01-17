@@ -74,7 +74,7 @@ def collectData(fileList, tracks_found):
             track_md, artist_md = getMetadata(track[1], artistName, search_artist=search_artist)
             if search_artist and artist_md is not None:
                 c.execute(
-                        'INSERT INTO artist (name,clean_name,is_male,is_female,is_group,german,american,other_country,total_years,breaking_years,life_span,genre_electronic,genre_pop,genre_hiphop,genre_rock,genre_other,followers,listener,play_count,recordings,releases,works,popularity,news,mean_chart_peak, mean_chart_weeks,total_chart_weeks, mean_album_chart_peak, mean_album_chart_weeks, total_album_chart_weeks,musicbrainz_id, discogs_id, lastfm_id, echonest_id, spotify_id,error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                        'INSERT INTO artist (name,clean_name,is_male,is_female,is_group,german,american,other_country,total_years,breaking_years,life_span,genre_electronic,genre_pop,genre_hiphop,genre_rock,genre_other,followers,listener,play_count,recordings,releases,works,popularity,news,mean_chart_peak_0, mean_chart_peak_1, mean_chart_peak_2, mean_chart_peak_3, mean_chart_peak_4, mean_chart_peak_5, mean_chart_peak_6, mean_chart_weeks,total_chart_weeks, mean_album_chart_peak_0, mean_album_chart_peak_1, mean_album_chart_peak_2, mean_album_chart_peak_3, mean_album_chart_peak_4, mean_album_chart_peak_5, mean_album_chart_peak_6, mean_album_chart_weeks, total_album_chart_weeks,musicbrainz_id, discogs_id, lastfm_id, echonest_id, spotify_id,error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                         (artist_md.name, artist_md.clean_name, artist_md.is_male, artist_md.is_female,
                          artist_md.is_group, artist_md.is_german, artist_md.is_american, artist_md.is_other_country,
                          artist_md.total_years, artist_md.breaking_years, artist_md.life_span,
@@ -83,9 +83,18 @@ def collectData(fileList, tracks_found):
                          # artist_md.genre_country, artist_md.genre_jazz,artist_md.genre_soul,
                          artist_md.genre_other, artist_md.followers, artist_md.listener_count,
                          artist_md.play_count, artist_md.recording_count, artist_md.release_count, artist_md.work_count,
-                         artist_md.popularity, artist_md.news, artist_md.meanChartPeak,
+                         artist_md.popularity, artist_md.news,
+
+                         artist_md.meanChartPeak_0, artist_md.meanChartPeak_1, artist_md.meanChartPeak_2,
+                         artist_md.meanChartPeak_3, artist_md.meanChartPeak_4, artist_md.meanChartPeak_5,
+                         artist_md.meanChartPeak_6,
+
                          artist_md.meanChartWeeks, artist_md.totalChartWeeks,
-                         artist_md.meanAlbumChartPeak, artist_md.meanAlbumChartWeeks, artist_md.totalAlbumChartWeeks,
+                         artist_md.meanAlbumChartPeak_0, artist_md.meanAlbumChartPeak_1, artist_md.meanAlbumChartPeak_2,
+                         artist_md.meanAlbumChartPeak_3, artist_md.meanAlbumChartPeak_4, artist_md.meanAlbumChartPeak_5,
+                         artist_md.meanAlbumChartPeak_6,
+
+                         artist_md.meanAlbumChartWeeks, artist_md.totalAlbumChartWeeks,
                          artist_md.musicbrainz_id, artist_md.discogs_id, artist_md.lastfm_id, artist_md.echonest_id,
                          artist_md.spotify_id, artist_md.error))
                 artist_id = c.lastrowid
@@ -253,7 +262,7 @@ def fixData(files):
     offset = 0
     while errors:
         c.execute(
-                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error != 0 OR artist.error != 0 OR track.peak_cat ISNULL OR artist.mean_chart_peak ISNULL OR track.eoe ISNULL LIMIT -1 OFFSET ?",
+                "SELECT * FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error != 0 OR artist.error != 0 OR track.peak_cat ISNULL LIMIT -1 OFFSET ?",
                 ((offset,)))
         data = c.fetchone()
         if data is None:
@@ -271,6 +280,8 @@ def fixData(files):
                 c.execute('UPDATE track SET peak_cat=?, peak_weeks=? WHERE track.id = ?',
                           (chart_data['target_peak_cat'], chart_data['target_peak_weeks'], data[0]))
                 if searchArtist:
+                    print "todo"
+                    return  # todo
                     c.execute(
                             'UPDATE artist SET mean_chart_peak=?, mean_chart_weeks=?,total_chart_weeks=?, mean_album_chart_peak=?, mean_album_chart_weeks=?, total_album_chart_weeks=? WHERE id=?',
                             (chart_data['artist_md']['mean_chart_peak'], chart_data['artist_md']['mean_chart_weeks'],
@@ -303,7 +314,7 @@ def fixData(files):
                         offset += 1
             if artist_md is not None:
                 c.execute(
-                        'UPDATE artist SET name=?,clean_name=?,is_male=?,is_female=?,is_group=?,german=?,american=?,other_country=?,total_years=?,breaking_years=?,life_span=?,genre_electronic=?,genre_pop=?,genre_hiphop=?,genre_rock=?,genre_other=?,followers=?,listener=?,play_count=?,recordings=?,releases=?,works=?,popularity=?,news=?,mean_chart_peak=?, mean_chart_weeks=?,total_chart_weeks=?, mean_album_chart_peak=?, mean_album_chart_weeks=?, total_album_chart_weeks=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?, echonest_id=?, spotify_id=?,error=? WHERE id=?',
+                        'UPDATE artist SET name=?,clean_name=?,is_male=?,is_female=?,is_group=?,german=?,american=?,other_country=?,total_years=?,breaking_years=?,life_span=?,genre_electronic=?,genre_pop=?,genre_hiphop=?,genre_rock=?,genre_other=?,followers=?,listener=?,play_count=?,recordings=?,releases=?,works=?,popularity=?,news=?,mean_chart_peak_0=?, mean_chart_peak_1=?, mean_chart_peak_2=?, mean_chart_peak_3=?, mean_chart_peak_4=?, mean_chart_peak_5=?, mean_chart_peak_6=?, mean_chart_weeks=?,total_chart_weeks=?, mean_album_chart_peak_0=?, mean_album_chart_peak_1=?, mean_album_chart_peak_2=?, mean_album_chart_peak_3=?, mean_album_chart_peak_4=?, mean_album_chart_peak_5=?, mean_album_chart_peak_6=?, mean_album_chart_weeks=?, total_album_chart_weeks=?, musicbrainz_id=?, discogs_id=?, lastfm_id=?, echonest_id=?, spotify_id=?,error=? WHERE id=?',
                         (artist_md.name, artist_md.clean_name, artist_md.is_male, artist_md.is_female,
                          artist_md.is_group, artist_md.is_german, artist_md.is_american, artist_md.is_other_country,
                          artist_md.total_years, artist_md.breaking_years, artist_md.life_span,
@@ -312,9 +323,15 @@ def fixData(files):
                          # artist_md.genre_country, artist_md.genre_jazz,artist_md.genre_soul,
                          artist_md.genre_other, artist_md.followers, artist_md.listener_count,
                          artist_md.play_count, artist_md.recording_count, artist_md.release_count, artist_md.work_count,
-                         artist_md.popularity, artist_md.news, artist_md.meanChartPeak,
+                         artist_md.popularity, artist_md.news,
+                         artist_md.meanChartPeak_0, artist_md.meanChartPeak_1, artist_md.meanChartPeak_2,
+                         artist_md.meanChartPeak_3, artist_md.meanChartPeak_4, artist_md.meanChartPeak_5,
+                         artist_md.meanChartPeak_6,
                          artist_md.meanChartWeeks, artist_md.totalChartWeeks,
-                         artist_md.meanAlbumChartPeak, artist_md.meanAlbumChartWeeks, artist_md.totalAlbumChartWeeks,
+                         artist_md.meanAlbumChartPeak_0, artist_md.meanAlbumChartPeak_1, artist_md.meanAlbumChartPeak_2,
+                         artist_md.meanAlbumChartPeak_3, artist_md.meanAlbumChartPeak_4, artist_md.meanAlbumChartPeak_5,
+                         artist_md.meanAlbumChartPeak_6,
+                         artist_md.meanAlbumChartWeeks, artist_md.totalAlbumChartWeeks,
                          artist_md.musicbrainz_id, artist_md.discogs_id, artist_md.lastfm_id, artist_md.echonest_id,
                          artist_md.spotify_id, artist_md.error, data[104]))
             if track_md is not None:

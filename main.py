@@ -2,16 +2,15 @@
 import Tkinter
 import getopt
 import tkFileDialog
-import os
+
 from mutagen.id3 import ID3
 from sklearn.externals import joblib
 
 import config
 from MIR.mir import *
 from dataCollector import *
-
-from learning.tree import decisionTree
 from learning.nn import neuralNetwork
+from learning.tree import decisionTree
 from learning.utils import *
 from utils import normalizeName
 
@@ -90,17 +89,22 @@ if __name__ == "__main__":
 
     job = 'collect'
     method = 'net'
-    size = 200
+    size = None
     output = None
-    ratio = 1
+    ratio = None
     plot_path = None
 
     input_dir = None
     pickle_file = None
+
+    units = 15
+    learning_rate = .001
+    n_iter = 25
+
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:p:m:o:s:r:d",
+        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:p:m:o:s:r:d:u:l:n",
                                    ["help", "job=", "input=", "pickle=", "method=", "output=",
-                                    "size=", "ratio=", "draw="])
+                                    "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations="])
     except:
         usage()
         sys.exit(2)
@@ -117,13 +121,19 @@ if __name__ == "__main__":
         elif o in ("-m", "--method"):
             method = a
         elif o in ("-o", "--output"):
-            output_file = a
+            output = a
         elif o in ("-s", "--size"):
             size = a
         elif o in ("-r", "--ratio"):
             ratio = a
         elif o in ("-d", "--draw"):
             plot_path = a
+        elif o in ("-u", "--units"):
+            units = a
+        elif o in ("-l", "--learningrate"):
+            learning_rate = a
+        elif o in ("-n", "--n_iterations"):
+            n_iter = a
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -149,21 +159,39 @@ if __name__ == "__main__":
             fixData(fileList)
     elif job == "train":
         if method == "net":
-            if output is None:
-                output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-                                      "{}_{}_{}.pkl".format(int(time.time())))
-            else:
-                if os.path.isdir(output):
-                    output = os.path.join(output, "{}_{}_{}.pkl".format(size, ratio, time.time()))
-                else:
-                    print output + " is not a valid directory"
-                    sys.exit(2)
-            data, targets = getDecisionData(size, ratio)
-            feature_names = data.columns
+            if size is None:
+                size = 5000
+            if ratio is None:
+                ratio = .8
 
-            # clf = neuralNetwork.getPipeline().fit() #data, targets.values
-            joblib.dump(clf, output)
+            features = None
+            # get feature list
+            if pickle_file is not None:
+                features = joblib.load(pickle_file)
+
+            training_data, training_targets, test_data, test_targets = neuralNetwork.getData(size, ratio, features)
+            classifier = neuralNetwork.getClassifier(units, learning_rate, n_iter)
+            pipeline = neuralNetwork.getPipeline(training_data, classifier)
+
+            clf = pipeline.fit(training_data, training_targets)
+
+
+            # if output is None:
+            #     output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
+            #                           "{}_{}_{}.pkl".format(int(time.time())))
+            # else:
+            #     if os.path.isdir(output):
+            #         output = os.path.join(output, "{}_{}_{}.pkl".format(size, ratio, time.time()))
+            #     else:
+            #         print output + " is not a valid directory"
+            #         sys.exit(2)
+            # joblib.dump(clf, output)
+
         elif method == "tree":
+            if size is None:
+                size = 200
+            if ratio is None:
+                ratio = 1
             if output is None:
                 output = os.path.join(os.getcwd(), 'learning', 'tree', 'models',
                                       "{}_{}_{}.pkl".format(int(time.time()), size, ratio))
@@ -206,6 +234,10 @@ if __name__ == "__main__":
         X, y = getData(5000)
         feature_names = X.columns
         X = impute(X)
-        decisionTree.tree_feat_sel(X, y, feature_names)
-    elif job =="test":
-        check1( fileList = joblib.load("files/new_files.pkl"))
+        features = decisionTree.tree_feat_sel(X, y, feature_names, threshold=0.01)
+        print features
+        if output is not None:
+            joblib.dump(features, output)
+
+    elif job == "test":
+        check1(fileList=joblib.load("files/new_files.pkl"))

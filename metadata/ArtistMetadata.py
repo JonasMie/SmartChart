@@ -57,10 +57,25 @@ class ArtistMetadata(MetadataBase):
         self.distChartPeak = None
         self.totalChartWeeks = 0
         self.meanChartWeeks = 0
-        self.meanChartPeak = 0
+
+        self.meanChartPeak_0 = 0
+        self.meanChartPeak_1 = 0
+        self.meanChartPeak_2 = 0
+        self.meanChartPeak_3 = 0
+        self.meanChartPeak_4 = 0
+        self.meanChartPeak_5 = 0
+        self.meanChartPeak_6 = 0
+
         self.totalAlbumChartWeeks = 0
         self.meanAlbumChartWeeks = 0
-        self.meanAlbumChartPeak = 0
+
+        self.meanAlbumChartPeak_0 = 0
+        self.meanAlbumChartPeak_1 = 0
+        self.meanAlbumChartPeak_2 = 0
+        self.meanAlbumChartPeak_3 = 0
+        self.meanAlbumChartPeak_4 = 0
+        self.meanAlbumChartPeak_5 = 0
+        self.meanAlbumChartPeak_6 = 0
 
     def addLanguage(self, lang):
         if lang == 'eng':
@@ -101,10 +116,11 @@ class ArtistMetadata(MetadataBase):
         self.distChartPeak = chartData['artist_md']['dist_chart_peak']
         self.totalChartWeeks = chartData['artist_md']['total_chart_weeks']
         self.meanChartWeeks = chartData['artist_md']['mean_chart_weeks']
-        self.meanChartPeak = chartData['artist_md']['mean_chart_peak']
+        setattr(self, "meanChartPeak_{}".format(chartData['artist_md']['mean_chart_peak']), 1)
+
         self.totalAlbumChartWeeks = chartData['artist_md']['total_album_chart_weeks']
         self.meanAlbumChartWeeks = chartData['artist_md']['mean_album_chart_weeks']
-        self.meanAlbumChartPeak = chartData['artist_md']['mean_album_chart_peak']
+        setattr(self, "meanAlbumChartPeak_{}".format(chartData['artist_md']['mean_album_chart_peak']), 1)
 
     def getData(self):
         return {
@@ -139,10 +155,23 @@ class ArtistMetadata(MetadataBase):
             # 'distChartPeak': self.distChartPeak,
             'totalChartWeeks': self.totalChartWeeks,
             'meanChartWeeks': self.meanChartWeeks,
-            'meanChartPeak': self.meanChartPeak,
+            'meanChartPeak_0': self.meanChartPeak_0,
+            'meanChartPeak_1': self.meanChartPeak_1,
+            'meanChartPeak_2': self.meanChartPeak_2,
+            'meanChartPeak_3': self.meanChartPeak_3,
+            'meanChartPeak_4': self.meanChartPeak_4,
+            'meanChartPeak_5': self.meanChartPeak_5,
+            'meanChartPeak_6': self.meanChartPeak_6,
+
             'totalAlbumChartWeeks': self.totalAlbumChartWeeks,
             'meanAlbumChartWeeks': self.meanAlbumChartWeeks,
-            'meanAlbumChartPeak': self.meanAlbumChartPeak,
+            'meanAlbumChartPeak_0': self.meanAlbumChartPeak_0,
+            'meanAlbumChartPeak_1': self.meanAlbumChartPeak_1,
+            'meanAlbumChartPeak_2': self.meanAlbumChartPeak_2,
+            'meanAlbumChartPeak_3': self.meanAlbumChartPeak_3,
+            'meanAlbumChartPeak_4': self.meanAlbumChartPeak_4,
+            'meanAlbumChartPeak_5': self.meanAlbumChartPeak_5,
+            'meanAlbumChartPeak_6': self.meanAlbumChartPeak_6,
             'musicbrainz_id': self.musicbrainz_id,
             'discogs_id': self.discogs_id,
             'lastfm_id': self.lastfm_id,
