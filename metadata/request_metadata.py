@@ -174,7 +174,7 @@ def getMusicbrainzMetadata(track, search_artist=True):
         if search_artist:
             if artist_id is None:
                 choice = False
-                artists = musicbrainzngs.search_artists(track[0],
+                artists = musicbrainzngs.search_artists(track[0].replace('/', ''),
                                                         ("artist", "begin", "end", "country", "ended", "gender",
                                                          "tag", "type", "area", "beginarea", "endarea"))
                 for (i, artist) in enumerate(artists['artist-list']):
@@ -235,6 +235,7 @@ def getMusicbrainzMetadata(track, search_artist=True):
         print colored("| The Musicbrainz service seems to be not available right now...", 'red')
     except musicbrainzngs.musicbrainz.ResponseError:  # Todo
         track_md.error = True
+        print colored("| The Musicbrainz service sent a flawed response back...", 'red')
 
 
 def getDiscogsTrackMetadata(release, track):
