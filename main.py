@@ -15,26 +15,6 @@ from learning.utils import *
 from utils import normalizeName
 
 
-# '''
-# Request the detailed track page and search for the track's peak position
-# '''
-# detail = requests.get("https://www.offiziellecharts.de%s" % track_url)
-# parsed_detail = BeautifulSoup(detail.text, "html.parser")
-# try:
-#     table_row = parsed_detail.find('table', class_='chart-table').findChildren()[6]
-# except AttributeError:
-#     return None
-#
-# '''
-# Check if the found table row contains the peak position
-# '''
-# if table_row.findChildren()[0].string == unicode("Höchstposition:", encoding='utf-8'):
-#     peak_re = re.search("[^\s]+", table_row.findChildren()[1].string)
-#     if peak_re:
-#         return peak_re.group()
-# return None
-
-
 def parseDirectory(directoryName, extensions):
     '''
     Taken from: 'facerecognitionTemplate' (DataMining)
@@ -123,9 +103,9 @@ if __name__ == "__main__":
         elif o in ("-o", "--output"):
             output = a
         elif o in ("-s", "--size"):
-            size = a
+            size = int(a)
         elif o in ("-r", "--ratio"):
-            ratio = a
+            ratio = float(a)
         elif o in ("-d", "--draw"):
             plot_path = a
         elif o in ("-u", "--units"):
@@ -169,11 +149,7 @@ if __name__ == "__main__":
             if pickle_file is not None:
                 features = joblib.load(pickle_file)
 
-            training_data, training_targets, test_data, test_targets = neuralNetwork.getData(size, ratio, features)
-            classifier = neuralNetwork.getClassifier(units, learning_rate, n_iter)
-            pipeline = neuralNetwork.getPipeline(training_data, classifier)
-
-            clf = pipeline.fit(training_data, training_targets)
+            neuralNetwork.train(size, ratio, units, learning_rate, n_iter, features)
 
 
             # if output is None:
@@ -231,7 +207,9 @@ if __name__ == "__main__":
             data = getPredictionData(3081)
             print decisionTree.predict(clf, data)
     elif job == "selection":
-        X, y = getData(5000)
+        if size is None:
+            size = 6000
+        X, y = getData(size, balanced=True)
         feature_names = X.columns
         X = impute(X)
         features = decisionTree.tree_feat_sel(X, y, feature_names, threshold=0.01)

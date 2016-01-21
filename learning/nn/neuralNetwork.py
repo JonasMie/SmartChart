@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.cross_validation import cross_val_score
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer, Imputer, StandardScaler
 from sklearn.utils import check_array
@@ -93,3 +94,13 @@ def getData(size, ratio, features):
     test_data.drop('peak_cat', axis=1, inplace=True)
 
     return training_data, training_targets, test_data, test_targets
+
+
+def train(size, ratio, units, learning_rate, iterations, features):
+    training_data, training_targets, test_data, test_targets = getData(size, ratio, features)
+    classifier = getClassifier(units, learning_rate, iterations)
+    pipeline = getPipeline(training_data, classifier)
+
+    clf = pipeline.fit(training_data, training_targets)
+
+    print cross_val_score(clf, training_data, training_targets)
