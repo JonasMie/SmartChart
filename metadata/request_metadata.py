@@ -415,7 +415,7 @@ def getLastfmTrackMetadata(recording):
         if recording.get_duration() > 0:
             track_md.buffer['length'].append(recording.get_duration() / 1000)
     except pylast.MalformedResponseError:
-        # track_md.error = True
+        track_md.error = True
         print colored("| LastFM error...", 'red')
 
 
@@ -434,7 +434,7 @@ def getLastfmMetadata(track, search_artist=True):
             getLastfmArtistsMetadata(recording.get_artist())
         getLastfmTrackMetadata(recording)
     except pylast.WSError, pylast.MalformedResponseError:
-        # track_md.error = True
+        track_md.error = True
         print colored("| LastFM error...", 'red')
 
 

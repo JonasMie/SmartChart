@@ -77,14 +77,23 @@ if __name__ == "__main__":
     input_dir = None
     pickle_file = None
 
-    units = 15
-    learning_rate = .001
-    n_iter = 25
+    units = None
+    learning_rate = None
+    n_iter = None
+    learning_rule = None,
+    batch_size = None
+    weight_decay = None
+    dropout_rate = None
+    loss_type = None
+    debug = False
+    verbose = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:p:m:o:s:r:d:u:l:n",
+        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:p:m:o:s:r:d:u:l:n:b:w:e:y:D:R:v",
                                    ["help", "job=", "input=", "pickle=", "method=", "output=",
-                                    "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations="])
+                                    "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=", "batchsize=",
+                                    "weightdecay=", "errortype=", "debug=", "dropoutrate=", "learningrule=",
+                                    "verbose="])
     except:
         usage()
         sys.exit(2)
@@ -109,11 +118,25 @@ if __name__ == "__main__":
         elif o in ("-d", "--draw"):
             plot_path = a
         elif o in ("-u", "--units"):
-            units = a
+            units = int(a)
         elif o in ("-l", "--learningrate"):
-            learning_rate = a
+            learning_rate = float(a)
         elif o in ("-n", "--n_iterations"):
-            n_iter = a
+            n_iter = int(a)
+        elif o in ("-w", "--weightdecay"):
+            weight_decay = float(a)
+        elif o in ("-b", "--batchsize"):
+            batch_size = int(a)
+        elif o in ("-e", "--errortype"):
+            loss_type = a
+        elif o in ("-D", "--dropoutrate"):
+            dropout_rate = a
+        elif o in ("-R", "--learningrule"):
+            learning_rule = a
+        elif o in ("-y", "--debug"):
+            debug = a
+        elif o in ("-v", "--verbose"):
+            verbose = a
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -139,17 +162,37 @@ if __name__ == "__main__":
             fixData(fileList)
     elif job == "train":
         if method == "net":
-            if size is None:
-                size = 5000
-            if ratio is None:
-                ratio = .8
 
             features = None
             # get feature list
             if pickle_file is not None:
                 features = joblib.load(pickle_file)
 
-            neuralNetwork.train(size, ratio, units, learning_rate, n_iter, features)
+            if size is None:
+                size = 5000
+            if ratio is None:
+                ratio = .8
+            if learning_rate is None:
+                learning_rate = .01
+            if learning_rule is None:
+                learning_rule = 'sgd'
+            if batch_size is None:
+                batch_size = 1  # online
+            if weight_decay is None:
+                weight_decay = None
+            if loss_type is None:
+                loss_type = 'mcc'
+            if n_iter is None:
+                n_iter = 100
+            if units is None:
+                if features:
+                    units = math.ceil((len(features)+7)/2)
+
+
+            neuralNetwork.train(size=size, ratio=ratio, units=units, learning_rate=learning_rate, iterations=n_iter,
+                                features=features, learning_rule=learning_rule, batch_size=batch_size,
+                                weight_decay=weight_decay, dropout_rate=dropout_rate, loss_type=loss_type, debug=debug,
+                                verbose=verbose)
 
 
             # if output is None:

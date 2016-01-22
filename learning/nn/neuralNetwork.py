@@ -67,19 +67,29 @@ def getPipeline(data, classifier):
     ])
 
 
-def getClassifier(units=15, learning_rate=.001, n_iter=25):
+def getClassifier(units, learning_rate, n_iter, learning_rule, batch_size, weight_decay, dropout_rate, loss_type, debug,
+                  verbose, callbacks):
     return Classifier(
             layers=[
                 Layer(type="Sigmoid", units=units),
                 Layer(type="Softmax")],
             learning_rate=learning_rate,
-            n_iter=n_iter)
+            n_iter=n_iter,
+            learning_rule=learning_rule,
+            batch_size=batch_size,
+            weight_decay=weight_decay,
+            dropout_rate=dropout_rate,
+            loss_type=loss_type,
+            debug=debug,
+            verbose=verbose,
+            callback=callbacks
+    )
 
 
-def getData(size, ratio, features):
-    complete_data = utils.getData(size, split=False)
+def getData(size, ratio, features, balanced):
+    complete_data = utils.getData(size, split=False, balanced=balanced)
 
-    if features is not None:
+    if len(features) > 0:
         features.append('peak_cat')
         complete_data = complete_data[features]
     threshold = int(size * ratio)
@@ -96,11 +106,32 @@ def getData(size, ratio, features):
     return training_data, training_targets, test_data, test_targets
 
 
-def train(size, ratio, units, learning_rate, iterations, features):
-    training_data, training_targets, test_data, test_targets = getData(size, ratio, features)
-    classifier = getClassifier(units, learning_rate, iterations)
+def on_train_start(**variables):
+    print "Beginning training..."
+
+
+def on_train_finish(**variables):
+    pass
+
+
+def on_epoch_start(**variables):
+    pass
+
+
+def on_epoch_finish(**variables):
+    print variables
+
+
+default_callbacks = {'on_train_start': on_train_start, 'on_epoch_start': on_epoch_start,
+                     'on_epoch_finish': on_epoch_finish, 'on_train_finish': on_train_finish}
+
+
+def train(size, ratio, units, learning_rate, iterations, features, learning_rule, batch_size, weight_decay,
+          dropout_rate, loss_type, debug, verbose, callbacks=default_callbacks):
+    training_data, training_targets, test_data, test_targets = getData(size, ratio, features, True)
+    classifier = getClassifier(units, learning_rate, iterations, learning_rule, batch_size, weight_decay, dropout_rate,
+                               loss_type, debug=debug, verbose=verbose, callbacks=callbacks)
+
     pipeline = getPipeline(training_data, classifier)
-
     clf = pipeline.fit(training_data, training_targets)
-
     print cross_val_score(clf, training_data, training_targets)

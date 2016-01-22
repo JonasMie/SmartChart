@@ -8,6 +8,43 @@ import utils
 
 FEATURES_FILE = os.path.join('features', 'mir.csv')
 
+error_obj = {
+    'acr': None, 'acr_std': None,
+    'acr_lag': None, 'acr_lag_std': None,
+    'amdf': None, 'amdf_std': None,
+    'zcr': None, 'zcr_std': None,
+    'nrg': None, 'nrg_std': None,
+    'pow': None, 'pow_std': None,
+    'cent': None, 'cent_std': None,
+    'flx': None, 'flx_std': None,
+    'rlf': None, 'rlf_std': None,
+    'mfcc_0': None, 'mfcc_0_std': None,
+    'mfcc_1': None, 'mfcc_1_std': None,
+    'mfcc_2': None, 'mfcc_2_std': None,
+    'mfcc_3': None, 'mfcc_3_std': None,
+    'mfcc_4': None, 'mfcc_4_std': None,
+    'mfcc_5': None, 'mfcc_5_std': None,
+    'mfcc_6': None, 'mfcc_6_std': None,
+    'mfcc_7': None, 'mfcc_7_std': None,
+    'mfcc_8': None, 'mfcc_8_std': None,
+    'mfcc_9': None, 'mfcc_9_std': None,
+    'mfcc_10': None, 'mfcc_10_std': None,
+    'mfcc_11': None, 'mfcc_11_std': None,
+    'mfcc_12': None, 'mfcc_12_std': None,
+    'chr_0': None, 'chr_0_std': None,
+    'chr_1': None, 'chr_1_std': None,
+    'chr_2': None, 'chr_2_std': None,
+    'chr_3': None, 'chr_3_std': None,
+    'chr_4': None, 'chr_4_std': None,
+    'chr_5': None, 'chr_5_std': None,
+    'chr_6': None, 'chr_6_std': None,
+    'chr_7': None, 'chr_7_std': None,
+    'chr_8': None, 'chr_8_std': None,
+    'chr_9': None, 'chr_9_std': None,
+    'chr_10': None, 'chr_10_std': None,
+    'chr_11': None, 'chr_11_std': None,
+    'eoe': None, 'eoe_std': None, 'eoe_min': None
+}
 
 def entropy_of_energy(signal, winSize=512, nSubFrames=8):
     subWinSize = int(winSize / nSubFrames)
@@ -115,6 +152,9 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
     nSamples = net.getControl(snet["src"] + "/mrs_natural/size").to_natural()
     nWindows = int(nSamples / winSize)
 
+    if nSamples<=0:
+        print colored("Negative sample amount, skipping file...", 'red')
+        return error_obj
     # selector = net.getControl(snet["sel"] + "/mrs_natural/disable")
     # selector.setValue_natural(0)
 
@@ -165,43 +205,7 @@ def marsyas_analyse(input_filename, winSize=512, n_mfcc=13, n_chroma=12):
     utils.endProgress()
 
     if results is None:
-        return {
-            'acr': None, 'acr_std': None,
-            'acr_lag': None, 'acr_lag_std': None,
-            'amdf': None, 'amdf_std': None,
-            'zcr': None, 'zcr_std': None,
-            'nrg': None, 'nrg_std': None,
-            'pow': None, 'pow_std': None,
-            'cent': None, 'cent_std': None,
-            'flx': None, 'flx_std': None,
-            'rlf': None, 'rlf_std': None,
-            'mfcc_0': None, 'mfcc_0_std': None,
-            'mfcc_1': None, 'mfcc_1_std': None,
-            'mfcc_2': None, 'mfcc_2_std': None,
-            'mfcc_3': None, 'mfcc_3_std': None,
-            'mfcc_4': None, 'mfcc_4_std': None,
-            'mfcc_5': None, 'mfcc_5_std': None,
-            'mfcc_6': None, 'mfcc_6_std': None,
-            'mfcc_7': None, 'mfcc_7_std': None,
-            'mfcc_8': None, 'mfcc_8_std': None,
-            'mfcc_9': None, 'mfcc_9_std': None,
-            'mfcc_10': None, 'mfcc_10_std': None,
-            'mfcc_11': None, 'mfcc_11_std': None,
-            'mfcc_12': None, 'mfcc_12_std': None,
-            'chr_0': None, 'chr_0_std': None,
-            'chr_1': None, 'chr_1_std': None,
-            'chr_2': None, 'chr_2_std': None,
-            'chr_3': None, 'chr_3_std': None,
-            'chr_4': None, 'chr_4_std': None,
-            'chr_5': None, 'chr_5_std': None,
-            'chr_6': None, 'chr_6_std': None,
-            'chr_7': None, 'chr_7_std': None,
-            'chr_8': None, 'chr_8_std': None,
-            'chr_9': None, 'chr_9_std': None,
-            'chr_10': None, 'chr_10_std': None,
-            'chr_11': None, 'chr_11_std': None,
-            'eoe': None, 'eoe_std': None, 'eoe_min': None
-        }
+        return error_obj
 
     mean = results.mean()
     std = results.std()
