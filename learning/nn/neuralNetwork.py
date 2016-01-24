@@ -1,11 +1,24 @@
+from __future__ import division
+
 import numpy as np
-from sklearn.cross_validation import cross_val_score
+import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer, Imputer, StandardScaler
 from sklearn.utils import check_array
 from sknn.mlp import Classifier, Layer
 
 import learning.utils as utils
+
+# ignore annoying pandas warning
+pd.options.mode.chained_assignment = None
+
+train_errors = None
+valid_errors = None
+prev_train_error = 0
+prev_valid_error = 0
+plot = None
+best_train_i = None
+best_valid_i = None
 
 booleans = ("track_genre_electronic", "track_genre_pop", "track_genre_hiphop", "track_genre_rock", "track_genre_other",
             "artist_genre_electronic", "artist_genre_pop", "artist_genre_hiphop", "artist_genre_rock",
@@ -67,12 +80,12 @@ def getPipeline(data, classifier):
     ])
 
 
-def getClassifier(units, learning_rate, n_iter, learning_rule, batch_size, weight_decay, dropout_rate, loss_type, debug,
-                  verbose, callbacks):
+def getNet(units, learning_rate, n_iter, learning_rule, batch_size, weight_decay, dropout_rate, loss_type, n_stable,
+           debug, verbose, callbacks, valid_size):
+    layers = [Layer(type="Sigmoid", units=u) for u in units]
+    layers.append(Layer(type="Softmax"))
     return Classifier(
-            layers=[
-                Layer(type="Sigmoid", units=units),
-                Layer(type="Softmax")],
+            layers=layers,
             learning_rate=learning_rate,
             n_iter=n_iter,
             learning_rule=learning_rule,
@@ -80,19 +93,22 @@ def getClassifier(units, learning_rate, n_iter, learning_rule, batch_size, weigh
             weight_decay=weight_decay,
             dropout_rate=dropout_rate,
             loss_type=loss_type,
+            n_stable=n_stable,
             debug=debug,
             verbose=verbose,
-            callback=callbacks
+            callback=callbacks,
+            # valid_set=valid_set
+            valid_size=valid_size
     )
 
 
 def getData(size, ratio, features, balanced):
     complete_data = utils.getData(size, split=False, balanced=balanced)
 
-    if len(features) > 0:
+    if features is not None and len(features) > 0:
         features.append('peak_cat')
         complete_data = complete_data[features]
-    threshold = int(size * ratio)
+    threshold = int(complete_data.shape[0] * (1 - ratio))
 
     training_data = complete_data[:threshold]
     test_data = complete_data[threshold:]
@@ -107,11 +123,19 @@ def getData(size, ratio, features, balanced):
 
 
 def on_train_start(**variables):
-    print "Beginning training..."
+    pass
+    # main_utils.startProgress("Beginning training")
 
 
 def on_train_finish(**variables):
-    pass
+    global plot
+    if plot is not None:
+        utils.plot_lines(data=[train_errors, valid_errors], labels=["Training error", "Validation error"],
+                         xlabel="number of epochs",
+                         ylabel=config['loss_type'],
+                         title="trainng and validation error", suptitle=None, conf=config, additionals=[
+                [best_train_i, variables['best_train_error']], [best_valid_i, variables['best_valid_error']]],
+                         path=plot)
 
 
 def on_epoch_start(**variables):
@@ -119,19 +143,54 @@ def on_epoch_start(**variables):
 
 
 def on_epoch_finish(**variables):
-    print variables
+    global config, train_errors, valid_errors, best_train_i, best_valid_i
+    train_errors[variables['i'] - 1] = variables['avg_train_error']
+    valid_errors[variables['i'] - 1] = variables['avg_valid_error']
+    if variables['is_best_train']:
+        best_train_i = variables['i']
+    if variables['is_best_valid']:
+        best_valid_i = variables['i']
+        # main_utils.progress(variables['i'] / float(config['epochs']) * 100)
 
 
-default_callbacks = {'on_train_start': on_train_start, 'on_epoch_start': on_epoch_start,
-                     'on_epoch_finish': on_epoch_finish, 'on_train_finish': on_train_finish}
+def on_batch_start(**variables):
+    pass
 
 
-def train(size, ratio, units, learning_rate, iterations, features, learning_rule, batch_size, weight_decay,
-          dropout_rate, loss_type, debug, verbose, callbacks=default_callbacks):
-    training_data, training_targets, test_data, test_targets = getData(size, ratio, features, True)
-    classifier = getClassifier(units, learning_rate, iterations, learning_rule, batch_size, weight_decay, dropout_rate,
-                               loss_type, debug=debug, verbose=verbose, callbacks=callbacks)
+def on_batch_finish(**variables):
+    pass
 
-    pipeline = getPipeline(training_data, classifier)
-    clf = pipeline.fit(training_data, training_targets)
-    print cross_val_score(clf, training_data, training_targets)
+
+default_callbacks = {
+    'on_train_start': on_train_start, 'on_epoch_start': on_epoch_start,
+    'on_batch_start': on_batch_start, 'on_epoch_finish': on_epoch_finish,
+    'on_train_finish': on_train_finish, 'on_batch_finish': on_batch_finish
+}
+
+
+def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
+    global config, plot, train_errors, valid_errors
+    plot = plot_path
+    train_errors = np.zeros(conf['epochs'])
+    valid_errors = np.zeros(conf['epochs'])
+    training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, conf['features'],
+                                                                         balanced=conf['balanced'])
+
+    # if there is not enough data available
+    conf['datasets'] = training_data.shape[0]
+    if conf['units'] is None:
+        conf['units'] = [training_data.shape[1]]
+    config = conf
+    net = getNet(conf['units'], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
+                 conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
+                 conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose, callbacks=callbacks,
+                 # valid_set=(valid_data, valid_targets)
+                 valid_size=conf['ratio']
+                 )
+
+    pipeline = getPipeline(training_data, net)
+    return pipeline.fit(training_data, training_targets), pipeline
+
+
+def predict(track_id, clf):
+    data = utils.selectData(track_id)

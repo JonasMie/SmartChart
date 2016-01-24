@@ -2,6 +2,7 @@
 import Tkinter
 import getopt
 import tkFileDialog
+from collections import OrderedDict
 
 from mutagen.id3 import ID3
 from sklearn.externals import joblib
@@ -13,6 +14,10 @@ from learning.nn import neuralNetwork
 from learning.tree import decisionTree
 from learning.utils import *
 from utils import normalizeName
+
+
+def getTags(path):
+    return unicode(ID3(path)["TIT2"].text[0]), unicode(normalizeName(ID3(path)['TPE1'].text[0]))
 
 
 def parseDirectory(directoryName, extensions):
@@ -39,10 +44,7 @@ def parseDirectory(directoryName, extensions):
                         # return files, artists_found, files_found
                         try:
                             path_ = os.path.join(root, filename)
-                            print path_
-                            trackName = unicode(ID3(path_)["TIT2"].text[0])
-                            id3ArtistName = unicode(ID3(path_)['TPE1'].text[0])
-                            id3ArtistNameNorm = unicode(normalizeName(id3ArtistName))
+                            trackName, id3ArtistNameNorm = getTags(path_)
                         except KeyError:
                             trackName = unicode(filename.rsplit(".", 1)[0])
                         except:
@@ -74,9 +76,10 @@ if __name__ == "__main__":
     ratio = None
     plot_path = None
 
-    input_dir = None
+    input = None
     pickle_file = None
 
+    layers = None
     units = None
     learning_rate = None
     n_iter = None
@@ -85,15 +88,19 @@ if __name__ == "__main__":
     weight_decay = None
     dropout_rate = None
     loss_type = None
+    n_stable = None
     debug = False
     verbose = None
+    balanced = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:p:m:o:s:r:d:u:l:n:b:w:e:y:D:R:v",
+        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:p:m:o:s:r:d:u:l:n:b:w:e:y:v:D:R:S:B",
                                    ["help", "job=", "input=", "pickle=", "method=", "output=",
-                                    "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=", "batchsize=",
-                                    "weightdecay=", "errortype=", "debug=", "dropoutrate=", "learningrule=",
-                                    "verbose="])
+                                    "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=",
+                                    "batchsize=",
+                                    "weightdecay=", "errortype=", "debug=", "verbose=", "dropoutrate=", "learningrule=",
+                                    "n_stable=", "balanced="
+                                    ])
     except:
         usage()
         sys.exit(2)
@@ -104,7 +111,7 @@ if __name__ == "__main__":
         elif o in ("-j", "--job"):
             job = a
         elif o in ("-i", "--input"):
-            input_dir = a
+            input = a
         elif o in ("-p", "--pickle"):
             pickle_file = a
         elif o in ("-m", "--method"):
@@ -118,7 +125,7 @@ if __name__ == "__main__":
         elif o in ("-d", "--draw"):
             plot_path = a
         elif o in ("-u", "--units"):
-            units = int(a)
+            units = [int(unit) for unit in a.split()]
         elif o in ("-l", "--learningrate"):
             learning_rate = float(a)
         elif o in ("-n", "--n_iterations"):
@@ -137,6 +144,10 @@ if __name__ == "__main__":
             debug = a
         elif o in ("-v", "--verbose"):
             verbose = a
+        elif o in ("-S", "--stable"):
+            n_stable = int(a)
+        elif o in ("-B", "--balanced"):
+            balanced = bool(a)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -147,8 +158,8 @@ if __name__ == "__main__":
         if pickle_file is not None:
             fileList = joblib.load(pickle_file)
             tracks_found = sum(len(y) for y in fileList.itervalues())
-        elif input_dir is not None:
-            fileList, artists_found, tracks_found = parseDirectory(input_dir, ("mp3"))
+        elif input is not None:
+            fileList, artists_found, tracks_found = parseDirectory(input, ("mp3"))
         else:
             root = Tkinter.Tk()
             root.withdraw()
@@ -162,14 +173,27 @@ if __name__ == "__main__":
             fixData(fileList)
     elif job == "train":
         if method == "net":
-
             features = None
             # get feature list
             if pickle_file is not None:
                 features = joblib.load(pickle_file)
 
-            if size is None:
-                size = 5000
+            if output == "":
+                output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
+                                      "{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(size, units, n_iter, learning_rate,
+                                                                              batch_size, weight_decay, dropout_rate,
+                                                                              loss_type, int(time.time())))
+            else:
+                if os.path.isdir(output):
+                    output = os.path.join(output,
+                                          "{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(size, units, n_iter, learning_rate,
+                                                                                  batch_size, weight_decay,
+                                                                                  dropout_rate, loss_type,
+                                                                                  int(time.time())))
+                else:
+                    print output + " is not a valid directory"
+                    sys.exit(2)
+
             if ratio is None:
                 ratio = .8
             if learning_rate is None:
@@ -186,25 +210,46 @@ if __name__ == "__main__":
                 n_iter = 100
             if units is None:
                 if features:
-                    units = math.ceil((len(features)+7)/2)
+                    i0 = len(features)
+                else:
+                    i0 = 115
+                units = [int(math.ceil((i0 + 7) / 2))]
+            if plot_path is not None:
+                if plot_path == "":
+                    plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
+                                             "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(size, units, n_iter, learning_rate,
+                                                                                     batch_size, weight_decay,
+                                                                                     dropout_rate,
+                                                                                     loss_type, int(time.time())))
+                else:
+                    if os.path.isdir(plot_path):
+                        output = os.path.join(plot_path,
+                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(size, units, n_iter,
+                                                                                      learning_rate,
+                                                                                      batch_size, weight_decay,
+                                                                                      dropout_rate, loss_type,
+                                                                                      int(time.time())))
+                    else:
+                        print plot_path + " is not a valid directory"
+                        sys.exit(2)
+            conf = OrderedDict([
+                ('datasets', size),
+                ('epochs', n_iter),
+                ('ratio', ratio),
+                ('units', units),
+                ('learning_rate', learning_rate),
+                ('features', features),
+                ('learning_rule', learning_rule),
+                ('batch_size', batch_size),
+                ('loss_type', loss_type),
+                ('weight_decay', weight_decay),
+                ('dropout_rate', dropout_rate),
+                ('n_stable', n_stable),
+                ('balanced', balanced)
+            ])
+            clf, pipeline = neuralNetwork.train(conf, plot_path, debug=debug, verbose=verbose)
 
-
-            neuralNetwork.train(size=size, ratio=ratio, units=units, learning_rate=learning_rate, iterations=n_iter,
-                                features=features, learning_rule=learning_rule, batch_size=batch_size,
-                                weight_decay=weight_decay, dropout_rate=dropout_rate, loss_type=loss_type, debug=debug,
-                                verbose=verbose)
-
-
-            # if output is None:
-            #     output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-            #                           "{}_{}_{}.pkl".format(int(time.time())))
-            # else:
-            #     if os.path.isdir(output):
-            #         output = os.path.join(output, "{}_{}_{}.pkl".format(size, ratio, time.time()))
-            #     else:
-            #         print output + " is not a valid directory"
-            #         sys.exit(2)
-            # joblib.dump(clf, output)
+            joblib.dump({'clf': clf, 'pipeline': pipeline}, output, compress=1)
 
         elif method == "tree":
             if size is None:
@@ -233,7 +278,26 @@ if __name__ == "__main__":
                 plot(clf, feature_names, config.class_names[0], plot_path)
     elif job == "predict":
         if method == "net":
-            pass
+            if input is None:
+                root = Tkinter.Tk()
+                root.withdraw()
+                input = tkFileDialog.askopenfilename(parent=root, title="Pick a file to predict",
+                                                     defaultextension="mp3",
+                                                     filetypes=[("Mp3 Files", "*.mp3")])
+                root.destroy()
+            else:
+                if os.path.isfile(input):
+                    if not input.endswith("mp3"):
+                        print "Sorry, only mp3-files are supported"
+                        sys.exit(2)
+                else:
+                    print "Sorry, the path seems to be incorrect..."
+                    sys.exit(2)
+
+            trackName, artistName = getTags(input)
+            neuralNetwork.predict(collectData({artistName: [(input, trackName)]}, 1, True))
+
+
         elif method == "tree":
             if pickle_file is None:
                 files = os.listdir(os.path.join('learning', 'tree', 'models'))
@@ -247,7 +311,7 @@ if __name__ == "__main__":
                 print "You must specify a pickle file containing the trained model"
                 sys.exit(2)
             clf = joblib.load(pickle_file)
-            data = getPredictionData(3081)
+            data = selectData(3081)
             print decisionTree.predict(clf, data)
     elif job == "selection":
         if size is None:

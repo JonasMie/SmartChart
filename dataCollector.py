@@ -34,7 +34,7 @@ def check(fileList):
                 print u"{}   {} ".format(track[1], artistName)
 
 
-def collectData(fileList, tracks_found):
+def collectData(fileList, tracks_found, returnID=False):
     c = conn.cursor()
     currTrack = 0
     for artist, tracks in fileList.iteritems():
@@ -67,10 +67,15 @@ def collectData(fileList, tracks_found):
                           (utils.normalizeName(track[1]), artist_id))
                 track_ = c.fetchone()
                 if track_ is not None:
-                    print u"|\n| Data is already existing    | Processed {0:.2f}%".format(
-                            (currTrack / tracks_found) * 100)
-                    print "|\n|-------------------------------------------------------"
-                    continue
+                    if returnID:
+                        print u"|\n| Data is already existing"
+                        print "|\n|-------------------------------------------------------"
+                        return track_[0]
+                    else:
+                        print u"|\n| Data is already existing    | Processed {0:.2f}%".format(
+                                (currTrack / tracks_found) * 100)
+                        print "|\n|-------------------------------------------------------"
+                        continue
             track_md, artist_md = getMetadata(track[1], artistName, search_artist=search_artist)
             if search_artist and artist_md is not None:
                 c.execute(
@@ -152,6 +157,7 @@ def collectData(fileList, tracks_found):
                          track_mir['chr_11'], track_mir['chr_11_std'],
                          track_md.peakCategory, track_md.peakWeeks,
                          track_md.error))
+                track_id = c.lastrowid
             print "|\n|\n|"
             conn.commit()
             print colored(u"| Data saved with errors    | Processed {0:.2f}%".format((currTrack / tracks_found) * 100),
@@ -159,6 +165,8 @@ def collectData(fileList, tracks_found):
                     u"| Data saved successfully    | Processed {0:.2f}%".format((currTrack / tracks_found) * 100),
                     'green')
             print "|------------------------------------------------------"
+            if returnID:
+                return track_id
     conn.close()
 
 
