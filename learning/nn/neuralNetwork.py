@@ -189,7 +189,7 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
                  )
 
     pipeline = getPipeline(training_data, net)
-    return pipeline.fit(training_data, training_targets), pipeline
+    return pipeline.fit(training_data, training_targets)
 
 
 def predict(track_id, clf):

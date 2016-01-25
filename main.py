@@ -247,9 +247,9 @@ if __name__ == "__main__":
                 ('n_stable', n_stable),
                 ('balanced', balanced)
             ])
-            clf, pipeline = neuralNetwork.train(conf, plot_path, debug=debug, verbose=verbose)
+            clf = neuralNetwork.train(conf, plot_path, debug=debug, verbose=verbose)
 
-            joblib.dump({'clf': clf, 'pipeline': pipeline}, output, compress=1)
+            joblib.dump(clf, output, compress=1)
 
         elif method == "tree":
             if size is None:
@@ -315,7 +315,7 @@ if __name__ == "__main__":
             print decisionTree.predict(clf, data)
     elif job == "selection":
         if size is None:
-            size = 6000
+            size = 8000
         X, y = getData(size, balanced=True)
         feature_names = X.columns
         X = impute(X)

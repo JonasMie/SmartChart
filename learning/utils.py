@@ -100,6 +100,7 @@ def plot(clf, feature_names, class_names, file):
 
 def plot_lines(data, labels, xlabel, ylabel, title, suptitle, conf=None, additionals=None, path=None, ls='-'):
     fig, ax = plt.subplots()
+    fig.set_size_inches(15, 10)
     for i, d in enumerate(data):
         ax.plot(range(1, len(d) + 1), d, color=colors[i], ls=ls, label=labels[i])
     legend = ax.legend(framealpha=.3)
@@ -112,30 +113,68 @@ def plot_lines(data, labels, xlabel, ylabel, title, suptitle, conf=None, additio
             if k != 'features':
                 if k == 'units':
                     keys.append(offsetbox.TextArea(r"$hidden\_layers$"))
-                    vals.append(offsetbox.TextArea(r"${}$".format(len(v))))
+                    vals.append(offsetbox.TextArea("{}".format(len(v))))
+
+                    # vals.append(offsetbox.TextArea(r"${}$".format(len(v))))
                     for l, layer in enumerate(v):
                         keys.append(offsetbox.TextArea(r"$units_{HL{%d}}$" % (l)))
-                        vals.append(offsetbox.TextArea(r"${}$".format(layer)))
+                        vals.append(offsetbox.TextArea("{}".format(layer)))
                 elif k == 'learning_rate':
                     keys.append(offsetbox.TextArea(r"$\eta$"))
-                    vals.append(offsetbox.TextArea(r"${}$".format(v)))
+                    vals.append(offsetbox.TextArea("{}".format(v)))
                 else:
                     keys.append(offsetbox.TextArea(r"${}$".format(k.replace("_", "\_"))))
-                    vals.append(offsetbox.TextArea(r"${}$".format(v)))
+                    try:
+                        v = float(v)
+                        vals.append(offsetbox.TextArea("{}".format(v)))
+                    except ValueError:
+                        vals.append(offsetbox.TextArea(r"${}$".format(v)))
 
-        if additionals is not None:
-            keys.append(offsetbox.TextArea(r"$E_{min, train}$", textprops={'color': colors[0]}))
-            keys.append(offsetbox.TextArea(r"$E_{min, valid}$", textprops={'color': colors[1]}))
-            vals.append(offsetbox.TextArea(r"${:.2e}  (epoch {})$".format(additionals[0][1], additionals[0][0]),
-                                           textprops={'color': colors[0]}))
-            vals.append(offsetbox.TextArea(r"${:.2e}  (epoch {})$".format(additionals[1][1], additionals[1][0]),
-                                           textprops={'color': colors[1]}))
+        # if additionals is not None:
+        #     keys.append(offsetbox.TextArea(r"$E_{min, train}$", textprops={'color': colors[0]}))
+        #     keys.append(offsetbox.TextArea(r"$E_{min, valid}$", textprops={'color': colors[1]}))
+        #     vals.append(offsetbox.TextArea(r"${:.2e}  (epoch {})$".format(additionals[0][1], additionals[0][0]),
+        #                                    textprops={'color': colors[0]}))
+        #     vals.append(offsetbox.TextArea(r"${:.2e}  (epoch {})$".format(additionals[1][1], additionals[1][0]),
+        #                                    textprops={'color': colors[1]}))
         vp1 = offsetbox.VPacker(children=keys, align="left", pad=0, sep=3)
         vp2 = offsetbox.VPacker(children=vals, align="right", pad=0, sep=5)
         hp = offsetbox.HPacker(children=(vp1, vp2), align="right", pad=5.76, sep=28.8)
         box = legend._legend_box
         box.get_children()[1].get_children()[0].get_children().append(hp)
         box.set_figure(box.figure)
+
+        # if conf is not None:
+    #     import matplotlib.offsetbox as offsetbox
+    #     keys = []
+    #     vals = []
+    #     hb = []
+    #     for k, v in conf.items():
+    #         if k != 'features':
+    #             # if k == 'units':
+    #             #     keys.append(
+    #             #             offsetbox.TextArea(r"$hidden\_layers$"))
+    #             #     vals.append(
+    #             #             offsetbox.TextArea(r"${}$".format(len(v))))
+    #             #     for l, layer in enumerate(v):
+    #             #         keys.append(
+    #             #                 offsetbox.TextArea(r"$units_{HL{%d}}$" % (l)))
+    #             #         vals.append(
+    #             #                 offsetbox.TextArea(r"${}$".format(layer)))
+    #             # elif k == 'learning_rate':
+    #             #     keys.append(offsetbox.VPacker(children=(offsetbox.TextArea(r"$\eta$"),), pad=0, sep=0))
+    #             #     vals.append(offsetbox.VPacker(children=(offsetbox.TextArea(r"${}$".format(v)))
+    #             # else:
+    #             hb.append(offsetbox.HPacker(children=[offsetbox.TextArea(r"${}$".format(k.replace("_", "\_")))], sep=0, pad=0),
+    #                                                   offsetbox.Hoffsetbox.TextArea(r"${}$".format(v))), pad=0, sep=0))
+    #
+    #             # if additionals is not None:
+    #             #     keys.append(offsetbox.TextArea(r"$E_{min, train}$", textprops={'color': colors[0]}))
+    #             #     keys.append(offsetbox.TextArea(r"$E_{min, valid}$", textprops={'color': colors[1]}))
+    #             #     vals.append(offsetbox.TextArea(r"${:.2e}  (epoch {})$".format(additionals[0][1], additionals[0][0]),
+    #             #                                    textprops={'color': colors[0]}))
+    #             #     vals.append(offsetbox.TextArea(r"${:.2e}  (epoch {})$".format(additionals[1][1], additionals[1][0]),
+    #             #                                    textprops={'color': colors[1]}))
 
     if additionals is not None:
         add = np.array(additionals).T
