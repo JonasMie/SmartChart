@@ -1,17 +1,21 @@
 from __future__ import division
 
+import math
+
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import FunctionTransformer, Imputer, StandardScaler
 from sklearn.utils import check_array
 from sknn.mlp import Classifier, Layer
+from termcolor import colored
 
 import learning.utils as utils
 
 # ignore annoying pandas warning
 pd.options.mode.chained_assignment = None
 
+config = None
 train_errors = None
 valid_errors = None
 prev_train_error = 0
@@ -62,18 +66,24 @@ def get_continuous(X):
 
 
 def getPipeline(data, classifier):
-    features = FeatureUnion(
-            [
+    global config
+    union = [
+        ('continousPipeline', Pipeline([
+            ('continousSelector', CustomFunctionTransformer(get_continuous)),
+            ('cont_imputer', Imputer()),
+            ('scaler', StandardScaler()),
+        ])),
+    ]
+
+    if config['type'] != 'mir':
+        union.append(
                 ('booleanPipeline', Pipeline([
                     ('boolean_transformer', CustomFunctionTransformer(get_booleans)),
                     ('bool_imputer', Imputer(strategy="most_frequent")),
                 ])),
-                ('continousPipeline', Pipeline([
-                    ('continousSelector', CustomFunctionTransformer(get_continuous)),
-                    ('cont_imputer', Imputer()),
-                    ('scaler', StandardScaler()),
-                ])),
-            ])
+        )
+
+    features = FeatureUnion(union)
     return Pipeline([
         ('features', features),
         ('neural network', classifier)
@@ -102,10 +112,10 @@ def getNet(units, learning_rate, n_iter, learning_rule, batch_size, weight_decay
     )
 
 
-def getData(size, ratio, features, balanced):
-    complete_data = utils.getData(size, split=False, balanced=balanced)
+def getData(size, ratio, features, balanced, type):
+    complete_data = utils.getData(size, split=False, balanced=balanced, type=type)
 
-    if features is not None and len(features) > 0:
+    if features is not None and len(features) > 0 and type != "md" and type != "mir":
         features.append('peak_cat')
         complete_data = complete_data[features]
     threshold = int(complete_data.shape[0] * (1 - ratio))
@@ -133,7 +143,7 @@ def on_train_finish(**variables):
         utils.plot_lines(data=[train_errors, valid_errors], labels=["Training error", "Validation error"],
                          xlabel="number of epochs",
                          ylabel=config['loss_type'],
-                         title="trainng and validation error", suptitle=None, conf=config, additionals=[
+                         title="training and validation error", suptitle=None, conf=config, additionals=[
                 [best_train_i, variables['best_train_error']], [best_valid_i, variables['best_valid_error']]],
                          path=plot)
 
@@ -174,12 +184,13 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
     train_errors = np.zeros(conf['epochs'])
     valid_errors = np.zeros(conf['epochs'])
     training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, conf['features'],
-                                                                         balanced=conf['balanced'])
+                                                                         balanced=conf['balanced'], type=conf['type'])
 
     # if there is not enough data available
     conf['datasets'] = training_data.shape[0]
     if conf['units'] is None:
-        conf['units'] = [training_data.shape[1]]
+        conf['units'] = [int(math.ceil((training_data.shape[1] + 7) / 2))]
+    conf['n_input'] = training_data.shape[1]
     config = conf
     net = getNet(conf['units'], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
                  conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
@@ -192,5 +203,25 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
     return pipeline.fit(training_data, training_targets)
 
 
-def predict(track_id, clf):
+def predict(trackName, artistName, track_id, clf):
     data = utils.selectData(track_id)
+    y = data.iloc[0]['peak_cat']
+    x = data.drop('peak_cat', axis=1)
+    res = clf.predict_proba(x)
+
+    print "\nPrediction for {} by {} successfully completed\n\n".format(trackName, artistName)
+
+    match = y == res.argmax()
+    print colored("Target category:       {}".format(y), 'green' if match else 'red')
+    print colored("Predicted category:    {}".format(res.argmax()), 'green' if match else 'red')
+
+    print "\n\n"
+    for cat, prob in enumerate(res[0]):
+        if cat == res.argmax() or cat == y:
+            if match:
+                color = 'green'
+            else:
+                color = 'red'
+        else:
+            color = 'blue'
+        print colored("Category {}:    {:.3f}%".format(cat, prob * 100), color)

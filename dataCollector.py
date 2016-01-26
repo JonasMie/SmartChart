@@ -49,13 +49,6 @@ def collectData(fileList, tracks_found, returnID=False):
             search_artist = False
 
         for track in tracks:
-            if track[0] in ["/Volumes/JONAS IPOD/iPod_Control/Music/F11/TDVZ.mp3",
-                            "/Volumes/JONAS IPOD/iPod_Control/Music/F02/HDIX.mp3",
-                            "/Volumes/JONAS IPOD/iPod_Control/Music/F15/FTYN.mp3",
-                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Foolik\Unknown Album\Foolik @ Ploetzlich Am Meer Festival.mp3",
-                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\Sido\Ich\04 Peilerman & Flow Teil 1.mp3",
-                            "//JONAS/multimedia/Music/iTunes/iTunes Media/Music\\Filthy Rich & Jørgensen\\Vacant\\Vacant (The Good Guys Remix).mp3"]:  # TODO: FIX
-                continue
             currTrack += 1
             print colored(u"| => Collecting data for {0} by {1}".format(track[1], artistName), 'blue')
             print colored(u"| => Track {0} of {1}".format(currTrack, tracks_found),
