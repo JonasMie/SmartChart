@@ -1,9 +1,44 @@
 import datetime
 import difflib
 import re
-
 import sys
+
 from dateutil import parser
+
+features = dict(
+        mir=[
+            'zcr', 'zcr_std', 'nrg', 'nrg_std', 'pow', 'pow_std', 'acr', 'acr_std', 'cent', 'cent_std', 'flx',
+            'flx_std', 'rlf',
+            'rlf_std', 'mfcc_0', 'mfcc_0_std', 'mfcc_1', 'mfcc_1_std', 'mfcc_2', 'mfcc_2_std', 'mfcc_3', 'mfcc_3_std',
+            'mfcc_4',
+            'mfcc_4_std', 'mfcc_5', 'mfcc_5_std', 'mfcc_6', 'mfcc_6_std', 'mfcc_7', 'mfcc_7_std', 'mfcc_8',
+            'mfcc_8_std', 'mfcc_9',
+            'mfcc_9_std', 'mfcc_10', 'mfcc_10_std', 'mfcc_11', 'mfcc_11_std', 'mfcc_12', 'mfcc_12_std', 'chr_0',
+            'chr_0_std',
+            'chr_1', 'chr_1_std', 'chr_2', 'chr_2_std', 'chr_3', 'chr_3_std', 'chr_4', 'chr_4_std', 'chr_5',
+            'chr_5_std', 'chr_6',
+            'chr_6_std', 'chr_7', 'chr_7_std', 'chr_8', 'chr_8_std', 'chr_9', 'chr_9_std', 'chr_10', 'chr_10_std',
+            'chr_11',
+            'chr_11_std', 'eoe', 'eoe_std', 'eoe_min'],
+        metadata_artist=[
+            'is_male', 'is_female', 'is_group', 'german', 'american', 'other_country', 'total_years',
+            'life_span',
+            'artist_genre_electronic', 'artist_genre_pop', 'artist_genre_hiphop', 'artist_genre_rock',
+            'artist_genre_other',
+            'followers', 'listener', 'play_count', 'popularity', 'mean_chart_peak_0', 'mean_chart_peak_1',
+            'mean_chart_peak_2',
+            'mean_chart_peak_3', 'mean_chart_peak_4', 'mean_chart_peak_5', 'mean_chart_peak_6',
+            'mean_chart_weeks',
+            'total_chart_weeks', 'mean_album_chart_peak_0', 'mean_album_chart_peak_1',
+            'mean_album_chart_peak_2',
+            'mean_album_chart_peak_3', 'mean_album_chart_peak_4', 'mean_album_chart_peak_5',
+            'mean_album_chart_peak_6',
+            'mean_album_chart_weeks', 'total_album_chart_weeks'],
+        metadata_track=[
+            'track_genre_electronic', 'track_genre_pop', 'track_genre_hiphop', 'track_genre_rock', 'track_genre_other',
+            'is_1980s', 'is_1990s', 'is_2000s', 'is_2010s', 'is_other_decade', 'length'
+        ]
+)
 
 feat = re.compile(r"([\[(](?:ft?\.|featuring|feat(?:[\.]|))(.*)[\])])", re.I)
 progress_x = 0

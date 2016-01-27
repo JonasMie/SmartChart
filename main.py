@@ -69,6 +69,9 @@ def usage():
 
 if __name__ == "__main__":
 
+    total_features = 115
+    mir_features = 69
+    md_features = 46
     job = 'collect'
     method = 'net'
     size = None
@@ -78,7 +81,7 @@ if __name__ == "__main__":
     type = 'all'
     input = None
     pickle_file = None
-
+    features = None
     layers = None
     units = None
     learning_rate = None
@@ -175,11 +178,6 @@ if __name__ == "__main__":
             fixData(fileList)
     elif job == "train":
         if method == "net":
-            features = None
-            # get feature list
-            if pickle_file is not None:
-                features = joblib.load(pickle_file)
-
             if ratio is None:
                 ratio = .2
             if learning_rate is None:
@@ -194,23 +192,36 @@ if __name__ == "__main__":
                 loss_type = 'mse'
             if n_iter is None:
                 n_iter = 1000
-            if units is None:
-                if type == 'all':
-                    if features:
+            if type != 'all':
+                if type == 'mir':
+                    i0 = mir_features
+                elif type == 'md':
+                    i0 = md_features
+                elif type == 'feat_sel':
+                    if pickle_file:
+                        features = None
+                        # get feature list
+                        features = joblib.load(pickle_file)
                         i0 = len(features)
                     else:
-                        i0 = 115
-                    units = [int(math.ceil((i0 + 7) / 2))]
+                        print "Please specify  the location of the pickle file (-p) containing the list of features"
+                        sys.exit(2)
+                elif type == 'rand':
+                    from utils import features
+                    import random
 
-            if type != "all":
-                nsize = type
+                    features = random.sample(np.hstack(features.values()), random.randint(1, total_features))
+                    i0 = len(features)
             else:
-                nsize = len(features) if features is not None else "all"
+                i0 = total_features
+            if units is None:
+                units = [int(math.ceil((i0 + 7) / 2))]
+
             if plot_path is not None:
                 if plot_path == "":
                     plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
-                                             'ratio',
-                                             "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(nsize, units, n_iter,
+                                             'units',
+                                             "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
                                                                                      learning_rate,
                                                                                      batch_size, weight_decay,
                                                                                      dropout_rate,
@@ -218,7 +229,7 @@ if __name__ == "__main__":
                 else:
                     if os.path.isdir(plot_path):
                         output = os.path.join(plot_path,
-                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(nsize, units, n_iter,
+                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
                                                                                       learning_rate,
                                                                                       batch_size, weight_decay,
                                                                                       dropout_rate, loss_type,
@@ -229,15 +240,15 @@ if __name__ == "__main__":
 
             if output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-                                      'ratio',
-                                      "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(nsize, type, units, n_iter,
+                                      'units',
+                                      "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
                                                                                  learning_rate,
                                                                                  batch_size, weight_decay, dropout_rate,
                                                                                  loss_type, int(time.time())))
             else:
                 if os.path.isdir(output):
                     output = os.path.join(output,
-                                          "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(nsize, type, units, n_iter,
+                                          "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
                                                                                      learning_rate,
                                                                                      batch_size, weight_decay,
                                                                                      dropout_rate, loss_type,

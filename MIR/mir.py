@@ -6,8 +6,6 @@ from termcolor import colored
 
 import utils
 
-FEATURES_FILE = os.path.join('features', 'mir.csv')
-
 error_obj = {
     'acr': None, 'acr_std': None,
     'acr_lag': None, 'acr_lag_std': None,
