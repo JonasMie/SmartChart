@@ -14,6 +14,7 @@ from learning.nn import neuralNetwork
 from learning.tree import decisionTree
 from learning.utils import *
 from utils import normalizeName
+import os
 
 
 def getTags(path):
@@ -61,11 +62,27 @@ def parseDirectory(directoryName, extensions):
 
 
 def usage():
-    print "Available options:"
-    print "\tjob:string (the task to perform (one of collect,...))"
-    print "\tpickle:string (the pickle file with saved track paths)"
-    print "\tinput:string (input directory containing the files to analyze)"
-
+    print "Available options:\n"
+    print "\tjob:string\t The task to perform {train, predict, selection, collect, fix}"
+    print "\tmethod:string\t The method to perform for the specified job.  {net, tree} for train and predict"
+    print "\ttype:string\t For job 'train': The type of inputs to use ({'all', 'mir', 'md', 'feat_sel', 'rand'}), for job 'selection': The type of feature selection to use ({'tree', 'random' (RandomForestClassifier), 'extra' (ExtraTreesClassifier)})"
+    print "\toutput:string\t The filepath to save the output-file (for train-job the classifier, for selection-job the dictionary of selected features (optional))"
+    print "\tinput:string\t For job 'predict': The filepath of the file to predict. For job 'collect' and 'fix': The folder containing the files to analyze"
+    print "\tpickle:string\t For job 'train': The filepath of the file containing the features selected by the feature selection (optional). For job 'predict': The filepath of the file containing the classifier to use. For job 'collect': To filepath of the file containg the saved filepaths to analyze (optional)"
+    print "\tsize:int\t For job 'train' and 'select': The amount of data to process"
+    print "\tratio:float\t For job 'train': The training- / validation-data ratio. For job 'select': The threshold tu use the x\% best features"
+    print "\tdraw:string\t For job 'train' and 'select': The path to save the plot (optional). If the value is empty, the path is generated"
+    print "\tunits:string\t For job 'train': The number of units for the hidden layers. For multiple hidden units, seperate the values by space"
+    print "\tlearningrate:float\t For job 'train': The learning rate to use for the neural network"
+    print "\tn_iterations:int\t For job 'train': Number of epochs to perform on data"
+    print "\tweightdecay:float\t For job 'train': The weight decay to use"
+    print "\tbatchsize:int\t For job 'train': Amount of batches in one iteration"
+    print "\terrortype:string\t For job 'train': The type of loss-measurement: {'mse', 'mae','mcc'}"
+    print "\tdropoutrate:float\t For job 'train': The ratio of dropout"
+    print "\tlearningrule:string\t For job 'train': The learning-rule to use"
+    print "\tbalanced:bool\t Use the same amount of data for each class (dramatically reduces database!)"
+    print "\tstable:int\t For job 'train': Early stopping of training, if the error remains the same after x datasets"
+    print "\tverbose:boolean\t For job 'train': Verbosity output"
 
 if __name__ == "__main__":
 
@@ -84,6 +101,7 @@ if __name__ == "__main__":
     features = None
     layers = None
     units = None
+    unit_range = None
     learning_rate = None
     n_iter = None
     learning_rule = None
@@ -98,7 +116,7 @@ if __name__ == "__main__":
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "h:j:i:t:p:m:o:s:r:d:u:l:n:b:w:e:y:v:D:R:S:B",
-                                   ["help", "job=", "input=", "pickle=", "method=", "output=",
+                                   ["help", "job=", "input=", "type=", "pickle=", "method=", "output=",
                                     "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=",
                                     "batchsize=",
                                     "weightdecay=", "errortype=", "debug=", "verbose=", "dropoutrate=", "learningrule=",
@@ -130,7 +148,10 @@ if __name__ == "__main__":
         elif o in ("-d", "--draw"):
             plot_path = a
         elif o in ("-u", "--units"):
-            units = [int(unit) for unit in a.split()]
+            if "-" in a:
+                unit_range = [int(unit) for unit in a.split("-")]
+            else:
+                units = [int(unit) for unit in a.split()]
         elif o in ("-l", "--learningrate"):
             learning_rate = float(a)
         elif o in ("-n", "--n_iterations"):
@@ -214,13 +235,13 @@ if __name__ == "__main__":
                     i0 = len(features)
             else:
                 i0 = total_features
-            if units is None:
+            if units is None and unit_range is None:
                 units = [int(math.ceil((i0 + 7) / 2))]
 
             if plot_path is not None:
                 if plot_path == "":
                     plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
-                                             'units',
+                                             'ratio',
                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
                                                                                      learning_rate,
                                                                                      batch_size, weight_decay,
@@ -240,7 +261,7 @@ if __name__ == "__main__":
 
             if output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-                                      'units',
+                                      'ratio',
                                       "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
                                                                                  learning_rate,
                                                                                  batch_size, weight_decay, dropout_rate,
@@ -263,6 +284,7 @@ if __name__ == "__main__":
                 ('epochs', n_iter),
                 ('ratio', ratio),
                 ('units', units),
+                ('unit_range', unit_range),
                 ('n_input', 0),
                 ('learning_rate', learning_rate),
                 ('features', features),
@@ -358,15 +380,25 @@ if __name__ == "__main__":
             data = selectData(3081)
             print decisionTree.predict(clf, data)
     elif job == "selection":
+        if type is None or type not in ("tree", "random", "extra"):
+            print "Please specify the kind of feature selection model ('-t tree' or '-t random' or '-t extra')"
+            sys.exit(2)
         if size is None:
             size = 8000
+        if n_iter is None:
+            n_iter = 10
+        if ratio is None:
+            ratio = .1
         X, y = getData(size, balanced=True)
         feature_names = X.columns
         X = impute(X)
-        features = decisionTree.tree_feat_sel(X, y, feature_names, threshold=0.01)
+        features = decisionTree.tree_feat_sel(X, y, feature_names, type, trees=n_iter, threshold=ratio)
         print features
-        if output is not None:
-            joblib.dump(features, output)
+        if output is None:
+            output = os.path.join('learning', 'tree', 'features',
+                                  "{}_{}_{}_{}.pkl".format(type, size, ratio, int(time.time())))
+        joblib.dump(features, output)
+    elif job == "svm":
+        from learning.svm import test
 
-    elif job == "test":
-        check1(fileList=joblib.load("files/new_files.pkl"))
+        test.test()

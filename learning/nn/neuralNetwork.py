@@ -23,6 +23,8 @@ prev_valid_error = 0
 plot = None
 best_train_i = None
 best_valid_i = None
+unit_iter_train_error = []
+unit_iter_valid_error = []
 
 booleans = ("track_genre_electronic", "track_genre_pop", "track_genre_hiphop", "track_genre_rock", "track_genre_other",
             "artist_genre_electronic", "artist_genre_pop", "artist_genre_hiphop", "artist_genre_rock",
@@ -146,6 +148,9 @@ def on_train_finish(**variables):
                          title="training and validation error", suptitle=None, conf=config, additionals=[
                 [best_train_i, variables['best_train_error']], [best_valid_i, variables['best_valid_error']]],
                          path=plot)
+    if config['unit_range']:
+        unit_iter_train_error.append(variables['avg_train_error'])
+        unit_iter_valid_error.append(variables['avg_valid_error'])
 
 
 def on_epoch_start(**variables):
@@ -192,15 +197,40 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
         conf['units'] = [int(math.ceil((training_data.shape[1] + 7) / 2))]
     conf['n_input'] = training_data.shape[1]
     config = conf
-    net = getNet(conf['units'], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
-                 conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
-                 conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose, callbacks=callbacks,
-                 # valid_set=(valid_data, valid_targets)
-                 valid_size=conf['ratio']
-                 )
 
-    pipeline = getPipeline(training_data, net)
-    return pipeline.fit(training_data, training_targets)
+    if conf['unit_range'] is not None:
+        del conf['units']
+        for units in range(conf['unit_range'][0], conf['unit_range'][1] + 1):
+            net = getNet([units], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
+                         conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
+                         conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose,
+                         callbacks=callbacks,
+                         valid_size=conf['ratio']
+                         )
+            pipeline = getPipeline(training_data, net)
+            pipeline.fit(training_data, training_targets)
+        utils.plot_lines(data=[unit_iter_train_error, unit_iter_valid_error],
+                         labels=["Training error", "Validation error"],
+                         xlabel="number of hidden units",
+                         ylabel=config['loss_type'],
+                         title="training and validation error", suptitle=None, conf=config, additionals=[
+                [np.array(unit_iter_train_error).argmin() + conf['unit_range'][0],
+                 np.array(unit_iter_train_error).min()],
+                [np.array(unit_iter_valid_error).argmin() + conf['unit_range'][0],
+                 np.array(unit_iter_valid_error).min()]],
+                         begin=conf['unit_range'][0],
+                         path="learning/nn/plots/unit_iter/{}_{}.png".format(conf['unit_range'], conf['epochs']))
+    else:
+        net = getNet(conf['units'], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
+                     conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
+                     conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose,
+                     callbacks=callbacks,
+                     # valid_set=(valid_data, valid_targets)
+                     valid_size=conf['ratio']
+                     )
+
+        pipeline = getPipeline(training_data, net)
+        return pipeline.fit(training_data, training_targets)
 
 
 def predict(trackName, artistName, track_id, clf):
