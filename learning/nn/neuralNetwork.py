@@ -5,7 +5,7 @@ import math
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.preprocessing import FunctionTransformer, Imputer, StandardScaler
+from sklearn.preprocessing import FunctionTransformer, Imputer, StandardScaler, MinMaxScaler
 from sklearn.utils import check_array
 from sknn.mlp import Classifier, Layer
 from termcolor import colored
@@ -77,11 +77,14 @@ def getPipeline(data, classifier):
         ])),
     ]
 
-    if config['type'] != 'mir':
+    if [i for i in data if i in booleans]:
+        strat = "most_frequent"
+        # strat = "mean"
         union.append(
                 ('booleanPipeline', Pipeline([
                     ('boolean_transformer', CustomFunctionTransformer(get_booleans)),
-                    ('bool_imputer', Imputer(strategy="most_frequent")),
+                    # ('boolean_scaler', MinMaxScaler(feature_range=(-1,1))),
+                    ('bool_imputer', Imputer(strategy=strat)),
                 ])),
         )
 
