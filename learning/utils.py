@@ -9,6 +9,7 @@ from matplotlib import cm
 from sklearn import tree
 from sklearn.externals.six import StringIO
 from sklearn.preprocessing import Imputer
+from math import sin, cos, pi
 
 con = sqlite3.connect('data.db')
 
@@ -225,16 +226,48 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
     explode += [0] * (x - len(explode) - implode + 1)
 
     # explode[-1] = -.05
-    cs = cm.Set1(np.arange(x - implode+1) / float(x - implode))
+    cs = cm.Set1(np.arange(x - implode + 1) / float(x - implode))
     cs[-1] = [.5, .5, .5, 1]
-    patches, texts = plt.pie(sizes, explode=explode, labels=indices, colors=cs, startangle=90,
+    patches, texts = plt.pie(sizes, explode=explode, colors=cs, startangle=90,
                              labeldistance=1.05)
 
-    for t in texts:
-        t.set_horizontalalignment('center')
-    for patch in patches:
+    for patch, t in zip(patches, texts):
+        patch.set_linewidth(1)
         patch.set_edgecolor('white')
-    plt.legend(patches, ordered_features, fontsize=8)
+        t.set_horizontalalignment('center')
+
+    plt.rcParams['font.size'] = 7
+
+    switch = False
+    for p1, l1 in zip(patches, indices):
+        offset = .05 if switch else -.05
+        r = p1.r
+        dr = r * 0.1
+        t1, t2 = p1.theta1, p1.theta2
+        theta = (t1 + t2) / 2.
+
+        xc, yc = r / 2. * cos(theta / 180. * pi), r / 2. * sin(theta / 180. * pi)
+        x1, y1 = (r + dr) * cos(theta / 180. * pi), (r + dr) * sin(theta / 180. * pi)
+        if x1 > 0:
+            x1 = r + 2 * dr + offset
+            ha, va = "left", "center"
+            tt = -180
+            cstyle = "angle,angleA=0,angleB=%f" % (theta,)
+        else:
+            x1 = -(r + 2 * dr) + offset
+            ha, va = "right", "center"
+            tt = 0
+            cstyle = "angle,angleA=0,angleB=%f" % (theta,)
+
+        plt.annotate(l1,
+                     (xc, yc), xycoords="data",
+                     xytext=(x1, y1), textcoords="data", ha=ha, va=va,
+                     arrowprops=dict(arrowstyle="-",
+                                     connectionstyle=cstyle,
+                                     patchB=p1))
+        switch = not switch
+
+    plt.legend(patches, ordered_features, fontsize=1)
 
     # Set aspect ratio to be equal so that pie is drawn as a circle.
     plt.axis('equal')
