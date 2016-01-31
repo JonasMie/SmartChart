@@ -389,7 +389,7 @@ if __name__ == "__main__":
             n_iter = 10
         if ratio is None:
             ratio = .1
-        X, y = getData(size, balanced=True)
+        X, y = getData(size, balanced=False)
         feature_names = X.columns
         X = impute(X)
         features = decisionTree.tree_feat_sel(X, y, feature_names, type, trees=n_iter, threshold=ratio)

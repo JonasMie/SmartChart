@@ -1,9 +1,11 @@
 import sqlite3
 
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pydot
+from matplotlib import cm
 from sklearn import tree
 from sklearn.externals.six import StringIO
 from sklearn.preprocessing import Imputer
@@ -126,7 +128,7 @@ def plot_lines(data, labels, xlabel, ylabel, title, suptitle, conf=None, additio
                 if k == 'n_input':
                     keys.append(offsetbox.TextArea(r"$features$"))
                     vals.append(offsetbox.TextArea(r"${}$".format(v), textprops={'size': 10}))
-                elif k == 'unit_range':
+                elif k == 'unit_range' and v is not None:
                     keys.append(offsetbox.TextArea(r"$unit range$"))
                     vals.append(offsetbox.TextArea(r"${}-{}$".format(v[0], v[1]), textprops={'size': 10}))
                 elif k == 'units':
@@ -168,3 +170,73 @@ def plot_lines(data, labels, xlabel, ylabel, title, suptitle, conf=None, additio
     if path is not None:
         plt.savefig(path, dpi=300)
     plt.show()
+
+
+def plot_chart(name, trees, importances, indices, ordered_features, std, x, type):
+    # Plot the feature importances of the forest
+    plt.figure(figsize=(20, 6))
+    plt.title("Feature importances according to the {}  (estimators: {})".format(name, trees))
+    # plt.("estimators: {}".format(trees))
+    if type in ("random", "extra"):
+        plt.bar(range(x), importances[indices],
+                color="r", yerr=std[indices], align="center")
+    else:
+        plt.bar(range(x), importances[indices],
+                color="r", align="center")
+
+    plt.xticks(range(x), ordered_features, rotation='vertical', fontsize=8)
+    plt.xlim([-1, x])
+    plt.ylim([-.01, .1])
+    plt.show()
+
+
+def plot_chart_h(name, trees, importances, indices, ordered_features, std, x, type):
+    # Plot the feature importances of the forest
+    plt.figure(figsize=(20, 6))
+    plt.title("Feature importances according to the {}  (estimators: {})".format(name, trees))
+    # plt.("estimators: {}".format(trees))
+    if type in ("random", "extra"):
+        plt.barh(range(x), importances[indices],
+                 color="r", yerr=std[indices], align="center")
+    else:
+        plt.bar(range(x), importances[indices],
+                color="r", align="center")
+
+    # plt.xticks(range(x), ordered_features, rotation='vertical', fontsize=8)
+    # plt.xlim([-1, x])
+    # plt.ylim([-.01, .1])
+    plt.show()
+
+
+def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, type):
+    # The slices will be ordered and plotted counter-clockwise.
+    sizes = importances * 100 / importances.sum()
+    sizes = sizes[indices]
+    importances = importances[indices]
+
+    implode = len(sizes[sizes < .3])
+    sizes[-implode] = sizes[sizes < .3].sum()
+    sizes = np.delete(sizes, range(x - implode + 1, x + 1))
+    indices = np.delete(indices, range(x - implode, x + 1))
+    indices = np.append(indices, "rest")
+
+    # colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral']
+    explode = [.1] * int(math.ceil(threshold * x))
+    explode += [0] * (x - len(explode) - implode + 1)
+
+    # explode[-1] = -.05
+    cs = cm.Set1(np.arange(x - implode+1) / float(x - implode))
+    cs[-1] = [.5, .5, .5, 1]
+    patches, texts = plt.pie(sizes, explode=explode, labels=indices, colors=cs, startangle=90,
+                             labeldistance=1.05)
+
+    for t in texts:
+        t.set_horizontalalignment('center')
+    for patch in patches:
+        patch.set_edgecolor('white')
+    plt.legend(patches, ordered_features, fontsize=8)
+
+    # Set aspect ratio to be equal so that pie is drawn as a circle.
+    plt.axis('equal')
+    plt.show()
+    # Plot the feature importances of the forest
