@@ -26,6 +26,9 @@ best_valid_i = None
 unit_iter_train_error = []
 unit_iter_valid_error = []
 
+unit_iter_best_train_error = []
+unit_iter_best_valid_error = []
+
 booleans = ("track_genre_electronic", "track_genre_pop", "track_genre_hiphop", "track_genre_rock", "track_genre_other",
             "artist_genre_electronic", "artist_genre_pop", "artist_genre_hiphop", "artist_genre_rock",
             "artist_genre_other" "available_on_spotify_in_ger", "exists_remix", "is_2010s", "is_2000s", "is_1990s",
@@ -155,6 +158,9 @@ def on_train_finish(**variables):
         unit_iter_train_error.append(variables['avg_train_error'])
         unit_iter_valid_error.append(variables['avg_valid_error'])
 
+        unit_iter_best_train_error.append(variables['best_train_error'])
+        unit_iter_best_valid_error.append(variables['best_valid_error'])
+
 
 def on_epoch_start(**variables):
     pass
@@ -223,6 +229,18 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
                  np.array(unit_iter_valid_error).min()]],
                          begin=conf['unit_range'][0],
                          path="learning/nn/plots/unit_iter/{}_{}.png".format(conf['unit_range'], conf['epochs']))
+        utils.plot_lines(data=[unit_iter_best_train_error, unit_iter_best_valid_error],
+                         labels=["Training error", "Validation error"],
+                         xlabel="number of hidden units",
+                         ylabel=config['loss_type'],
+                         title="training and validation error", suptitle=None, conf=config, additionals=[
+                [np.array(unit_iter_best_train_error).argmin() + conf['unit_range'][0],
+                 np.array(unit_iter_best_train_error).min()],
+                [np.array(unit_iter_best_valid_error).argmin() + conf['unit_range'][0],
+                 np.array(unit_iter_best_valid_error).min()]],
+                         begin=conf['unit_range'][0],
+                         path="learning/nn/plots/unit_iter/{}_{}_{}.png".format(conf['unit_range'], conf['epochs'],
+                                                                                "best"))
     else:
         net = getNet(conf['units'], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
                      conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
