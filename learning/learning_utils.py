@@ -10,6 +10,8 @@ from sklearn import tree
 from sklearn.externals.six import StringIO
 from sklearn.preprocessing import Imputer
 from math import sin, cos, pi
+from utils import features
+
 
 con = sqlite3.connect('data.db')
 
@@ -212,23 +214,41 @@ def plot_chart_h(name, trees, importances, indices, ordered_features, std, x, ty
 def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, type):
     # The slices will be ordered and plotted counter-clockwise.
     sizes = importances * 100 / importances.sum()
+    merge_threshold = .6
     sizes = sizes[indices]
     importances = importances[indices]
 
-    implode = len(sizes[sizes < .3])
-    sizes[-implode] = sizes[sizes < .3].sum()
+    implode = len(sizes[sizes < merge_threshold])
+    sizes[-implode] = sizes[sizes < merge_threshold].sum()
     sizes = np.delete(sizes, range(x - implode + 1, x + 1))
     indices = np.delete(indices, range(x - implode, x + 1))
     indices = np.append(indices, "rest")
 
-    # colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral']
+    md = 'red'
+    mir= 'blue'
+    gray = 'gray'
+
+    new_indices = []
+    colors = []
+
+    for i, ind in enumerate(indices):
+        new_indices.append("{} ({:.2f} %)".format(ind, sizes[i]))
+        if ordered_features[i] in features['mir']:
+            colors.append(mir)
+        elif ordered_features[i] in features['metadata_artist'] or ordered_features[i] in features['metadata_track']:
+            colors.append(md)
+        else:
+            colors.append(gray)
+    colors[-1] = gray
+
+    new_indices = np.array(new_indices)
     explode = [.1] * int(math.ceil(threshold * x))
     explode += [0] * (x - len(explode) - implode + 1)
 
     # explode[-1] = -.05
     cs = cm.Set1(np.arange(x - implode + 1) / float(x - implode))
     cs[-1] = [.5, .5, .5, 1]
-    patches, texts = plt.pie(sizes, explode=explode, colors=cs, startangle=90,
+    patches, texts = plt.pie(sizes, explode=explode, colors=colors, startangle=90,
                              labeldistance=1.05)
 
     for patch, t in zip(patches, texts):
@@ -239,7 +259,7 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
     plt.rcParams['font.size'] = 7
 
     switch = False
-    for p1, l1 in zip(patches, indices):
+    for p1, l1 in zip(patches, new_indices):
         offset = .05 if switch else -.05
         r = p1.r
         dr = r * 0.1
@@ -247,7 +267,7 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
         theta = (t1 + t2) / 2.
 
         xc, yc = r / 2. * cos(theta / 180. * pi), r / 2. * sin(theta / 180. * pi)
-        x1, y1 = (r + dr) * cos(theta / 180. * pi), (r + dr) * sin(theta / 180. * pi)
+        x1, y1 = (r + dr) * cos(theta / 180. * pi), (r + dr) * sin(theta / 180. * pi) + sin(theta / 180. * pi) * .25
         if x1 > 0:
             x1 = r + 2 * dr + offset
             ha, va = "left", "center"
@@ -267,7 +287,7 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
                                      patchB=p1))
         switch = not switch
 
-    plt.legend(patches, ordered_features, fontsize=1)
+    # plt.legend(patches, ordered_features, fontsize=1)
 
     # Set aspect ratio to be equal so that pie is drawn as a circle.
     plt.axis('equal')

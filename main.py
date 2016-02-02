@@ -12,7 +12,7 @@ from MIR.mir import *
 from dataCollector import *
 from learning.nn import neuralNetwork
 from learning.tree import decisionTree
-from learning.utils import *
+from learning.learning_utils import *
 from utils import normalizeName
 import os
 

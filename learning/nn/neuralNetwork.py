@@ -10,7 +10,7 @@ from sklearn.utils import check_array
 from sknn.mlp import Classifier, Layer
 from termcolor import colored
 
-import learning.utils as utils
+import learning.learning_utils as utils
 
 # ignore annoying pandas warning
 pd.options.mode.chained_assignment = None

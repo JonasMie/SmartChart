@@ -3,7 +3,7 @@ import numpy as np
 from sklearn import tree
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
-from learning import utils
+from learning import learning_utils
 
 def train(data, target):
     clf = tree.DecisionTreeClassifier()
@@ -41,7 +41,7 @@ def tree_feat_sel(X, y, feature_names, type, trees=None, threshold=None, plot=Tr
                          axis=0)
         # utils.plot_chart(clf.__class__.__name__, trees, importances, indices, ordered_features, std, X.shape[1],type)
         # utils.plot_chart_h(clf.__class__.__name__, trees, importances, indices, ordered_features, std, X.shape[1],type)
-        utils.plot_pie(clf.__class__.__name__, trees, importances, indices, ordered_features, threshold, X.shape[1], type)
+        learning_utils.plot_pie(clf.__class__.__name__, trees, importances, indices, ordered_features, threshold, X.shape[1], type)
 
     if threshold:
         return features
