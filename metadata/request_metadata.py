@@ -185,11 +185,11 @@ def getMusicbrainzMetadata(track, search_artist=True):
                     if len(artists['artist-list']) - 1 > i and utils.is_similar(artist['name'],
                                                                                 artists['artist-list'][i + 1]['name'],
                                                                                 normalize=True) and utils.is_similar(
-                            track[0], artist['name'], normalize=True):
+                        track[0], artist['name'], normalize=True):
                         choice = True
                         if i == 0:
                             print u"Sorry, the artist '{0}' is ambigious, please chose the right one:\n[{1}] None of the options".format(
-                                    artist['name'], i)
+                                artist['name'], i)
                         print u"[{0}] {1}: {2}".format(i + 1, artist['name'],
                                                        artist[
                                                            'disambiguation'] if 'disambiguation' in artist else "no description")
@@ -204,12 +204,12 @@ def getMusicbrainzMetadata(track, search_artist=True):
                             # FIXME: why does musicbrainzngs.search_artist() not provide this information? => double request necessary
                             # getMusicbrainzArtistMetadata(artists['artist-list'][artist_int - 1])
                             getMusicbrainzArtistMetadata(
-                                    musicbrainzngs.get_artist_by_id(artists['artist-list'][artist_int - 1]['id'],
-                                                                    ['recordings', 'releases',
-                                                                     'release-groups', 'works',
-                                                                     'aliases', 'artist-rels',
-                                                                     'label-rels', 'tags', 'ratings'])[
-                                        'artist'])
+                                musicbrainzngs.get_artist_by_id(artists['artist-list'][artist_int - 1]['id'],
+                                                                ['recordings', 'releases',
+                                                                 'release-groups', 'works',
+                                                                 'aliases', 'artist-rels',
+                                                                 'label-rels', 'tags', 'ratings'])[
+                                    'artist'])
                         except ValueError:
                             pass  # TODO
                         break
@@ -433,7 +433,11 @@ def getLastfmMetadata(track, search_artist=True):
         if search_artist:
             getLastfmArtistsMetadata(recording.get_artist())
         getLastfmTrackMetadata(recording)
-    except pylast.WSError, pylast.MalformedResponseError:
+    except pylast.WSError as e:
+        if e.status != "6": # status 6 => Track not found
+            track_md.error = True
+            print colored("| LastFM error...", 'red')
+    except pylast.MalformedResponseError:
         track_md.error = True
         print colored("| LastFM error...", 'red')
 
@@ -619,7 +623,7 @@ def getPeakPosition(tracklist, searchArtist=False, Featurings=True):
 
             mean_album_chart_weeks = np.mean(mean_albums_chart_weeks) if len(mean_albums_chart_weeks) > 0 else 0
             mean_album_chart_peak = getPeakCategory(np.mean(mean_albums_chart_peak)) if len(
-                    mean_albums_chart_peak) > 0 else CAT0
+                mean_albums_chart_peak) > 0 else CAT0
             track_results['artist_md'] = {'dist_chart_peak': dist_chart_peak, 'total_chart_weeks': total_chart_weeks,
                                           'mean_chart_weeks': mean_chart_weeks, 'mean_chart_peak': mean_chart_peak,
                                           'total_album_chart_weeks': total_albums_chart_weeks,
@@ -654,7 +658,7 @@ def getMetadata(trackName, artistName, search_artist):
         getMusicbrainzMetadata(track, search_artist)
     else:
         print "|    The Musicbrainz-service was not reachable the last {} tries. Try again in {} seconds".format(
-                MAX_TRIES, int(TRY_AGAIN_AFTER - (time.time() - last_request)))
+            MAX_TRIES, int(TRY_AGAIN_AFTER - (time.time() - last_request)))
     print "| Collecting data from Discogs..."
     getDiscogsMetadata(track, search_artist)
     print "| Collecting data from Echonest..."
