@@ -10,11 +10,10 @@ from sklearn.externals import joblib
 import config
 from MIR.mir import *
 from dataCollector import *
+from learning.learning_utils import *
 from learning.nn import neuralNetwork
 from learning.tree import decisionTree
-from learning.learning_utils import *
 from utils import normalizeName
-import os
 
 
 def getTags(path):
@@ -55,7 +54,7 @@ def parseDirectory(directoryName, extensions):
                             files[id3ArtistNameNorm] = list()
                             artists_found += 1
                         files[id3ArtistNameNorm].append(
-                                (unicode(os.path.join(root, filename)), trackName))
+                            (unicode(os.path.join(root, filename)), trackName))
 
     # joblib.dump(files, os.path.join('files', 'new_files.pkl'))
     return files, artists_found, files_found
@@ -84,6 +83,7 @@ def usage():
     print "\tstable:int\t For job 'train': Early stopping of training, if the error remains the same after x datasets"
     print "\tverbose:boolean\t For job 'train': Verbosity output"
 
+
 if __name__ == "__main__":
 
     total_features = 115
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     output = None
     ratio = None
     plot_path = None
-    type = 'all'
+    type = None
     input = None
     pickle_file = None
     features = None
@@ -113,13 +113,16 @@ if __name__ == "__main__":
     debug = False
     verbose = None
     balanced = False
+    criterion = None
+    gs_params = dict()
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:t:p:m:o:s:r:d:u:l:n:b:w:e:y:v:D:R:S:B",
+        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:t:p:m:o:s:r:d:u:l:n:b:w:e:y:v:c:D:R:S:B",
                                    ["help", "job=", "input=", "type=", "pickle=", "method=", "output=",
                                     "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=",
                                     "batchsize=",
-                                    "weightdecay=", "errortype=", "debug=", "verbose=", "dropoutrate=", "learningrule=",
+                                    "weightdecay=", "errortype=", "debug=", "verbose=", "criterion=", "dropoutrate=",
+                                    "learningrule=",
                                     "n_stable=", "balanced="
                                     ])
     except:
@@ -155,7 +158,7 @@ if __name__ == "__main__":
         elif o in ("-l", "--learningrate"):
             learning_rate = float(a)
         elif o in ("-n", "--n_iterations"):
-            n_iter = int(a)
+            n_iter = a
         elif o in ("-w", "--weightdecay"):
             weight_decay = float(a)
         elif o in ("-b", "--batchsize"):
@@ -170,6 +173,8 @@ if __name__ == "__main__":
             debug = a
         elif o in ("-v", "--verbose"):
             verbose = a
+        elif o in ("-c", "--criterion"):
+            criterion = a
         elif o in ("-S", "--stable"):
             n_stable = int(a)
         elif o in ("-B", "--balanced"):
@@ -210,10 +215,18 @@ if __name__ == "__main__":
             if weight_decay is None:
                 weight_decay = None
             if loss_type is None:
-                loss_type = 'mse'
+                loss_type = 'mcc'
             if n_iter is None:
-                n_iter = 1000
-            if type != 'all':
+                n_iter = 70
+            else:
+                n_iter = utils.getElements(n_iter)
+                gs_params = utils.addToGS(gs_params, 'neural_network__n_iter', n_iter)
+
+            if type:
+                type = utils.getElements(type)
+                gs_params = utils.addToGS(gs_params, 'type', type)
+
+            if type != 'all' and isinstance(type, basestring):
                 if type == 'mir':
                     i0 = mir_features
                 elif type == 'md':
@@ -241,7 +254,7 @@ if __name__ == "__main__":
             if plot_path is not None:
                 if plot_path == "":
                     plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
-                                             'ratio',
+                                             'type',
                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
                                                                                      learning_rate,
                                                                                      batch_size, weight_decay,
@@ -261,7 +274,7 @@ if __name__ == "__main__":
 
             if output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-                                      'ratio',
+                                      'type',
                                       "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
                                                                                  learning_rate,
                                                                                  batch_size, weight_decay, dropout_rate,
@@ -296,95 +309,94 @@ if __name__ == "__main__":
                 ('n_stable', n_stable),
                 ('balanced', balanced)
             ])
-            clf = neuralNetwork.train(conf, plot_path, debug=debug, verbose=verbose)
 
+            clf = neuralNetwork.train(conf, plot_path, gs_params=gs_params, debug=debug, verbose=verbose)
+            final_attributes = []
+            if gs_params:
+                clf = clf.best_estimator_
+            for l in clf._final_estimator.get_parameters():
+                final_attributes.append({'layer': l.layer, 'weights': l.weights, 'biases': l.biases})
+            clf.final_attributes = final_attributes
             joblib.dump(clf, output, compress=1)
-
         elif method == "tree":
             if size is None:
-                size = 200
+                size = -1
+            if type is None:
+                type = "all"
+            if criterion is None:
+                criterion = "gini"
             if ratio is None:
                 ratio = 1
-            if output is None:
+            if output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'tree', 'models',
-                                      "{}_{}_{}.pkl".format(int(time.time()), size, ratio))
+                                      "{}_{}_{}.pkl".format(type, criterion, int(time.time())))
             else:
                 if os.path.isdir(output):
-                    output = os.path.join(output, "{}_{}_{}.pkl".format(size, ratio, time.time()))
+                    output = os.path.join(output,
+                                          "{}_{}_{}.pkl".format(type, criterion, int(time.time())))
                 else:
                     print output + " is not a valid directory"
                     sys.exit(2)
-            data, targets = getDecisionData(size, ratio)
-            feature_names = data.columns
 
-            data = impute(data)
-            clf = decisionTree.train(data, targets.values)
-            joblib.dump(clf, output)
+            conf = {
+                'datasets': size,
+                'type': 'all',
+                'criterion': criterion,
+                'balanced': balanced
+            }
+            clf, feature_names = decisionTree.train(conf)
+            joblib.dump(clf, output, compress=1)
             if plot_path is not None:
                 if plot_path == "":
                     plot_path = os.path.join('learning', 'tree', 'plots',
                                              "{}_{}_{}.png".format(int(time.time()), size, ratio))
-                plot(clf, feature_names, config.class_names[0], plot_path)
+                plot(clf._final_estimator, feature_names, config.class_names[0], plot_path)
     elif job == "predict":
-        if method == "net":
-            if input is None:
-                root = Tkinter.Tk()
-                root.withdraw()
-                input = tkFileDialog.askopenfilename(parent=root, title="Pick a file to predict",
-                                                     defaultextension="mp3",
-                                                     filetypes=[("Mp3 Files", "*.mp3")])
-                root.destroy()
-            else:
-                if os.path.isfile(input):
-                    if not input.endswith("mp3"):
-                        print "Sorry, only mp3-files are supported"
-                        sys.exit(2)
-                else:
-                    print "Sorry, the path seems to be incorrect..."
+        if input is None:
+            root = Tkinter.Tk()
+            root.withdraw()
+            input = tkFileDialog.askopenfilename(parent=root, title="Pick a file to predict",
+                                                 defaultextension="mp3",
+                                                 filetypes=[("Mp3 Files", "*.mp3")])
+            root.destroy()
+        else:
+            if os.path.isfile(input):
+                if not input.endswith("mp3"):
+                    print "Sorry, only mp3-files are supported"
                     sys.exit(2)
-
-            trackName, artistName = getTags(input)
-
-            if pickle_file is None:
-                root = Tkinter.Tk()
-                root.withdraw()
-                pickle_file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
-                                                           defaultextension="pkl",
-                                                           filetypes=[("Pickle Files", "*.pkl")])
-                root.destroy()
             else:
-                if os.path.isfile(pickle_file):
-                    if not input.endswith("pkl"):
-                        print "Sorry, only pkl-files are supported"
-                        sys.exit(2)
-                else:
-                    print "Sorry, the path seems to be incorrect..."
-                    sys.exit(2)
-            clf = joblib.load(pickle_file)
-            neuralNetwork.predict(trackName, artistName, collectData({artistName: [(input, trackName)]}, 1, True), clf)
-
-
-        elif method == "tree":
-            if pickle_file is None:
-                files = os.listdir(os.path.join('learning', 'tree', 'models'))
-                i = len(files) - 1
-                while i >= 0:
-                    if files[i].endswith('.pkl'):
-                        pickle_file = os.path.join('learning', 'tree', 'models', files[i])
-                        break
-                    i -= 1
-            if pickle_file is None:
-                print "You must specify a pickle file containing the trained model"
+                print "Sorry, the path seems to be incorrect..."
                 sys.exit(2)
-            clf = joblib.load(pickle_file)
-            data = selectData(3081)
-            print decisionTree.predict(clf, data)
+
+        trackName, artistName = getTags(input)
+
+        if pickle_file is None:
+            root = Tkinter.Tk()
+            root.withdraw()
+            pickle_file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
+                                                       defaultextension="pkl",
+                                                       filetypes=[("Pickle Files", "*.pkl")])
+            root.destroy()
+        else:
+            if os.path.isfile(pickle_file):
+                if not input.endswith("pkl"):
+                    print "Sorry, only pkl-files are supported"
+                    sys.exit(2)
+            else:
+                print "Sorry, the path seems to be incorrect..."
+                sys.exit(2)
+        clf = joblib.load(pickle_file)
+
+        if method == "net":
+            neuralNetwork.predict(trackName, artistName, collectData({artistName: [(input, trackName)]}, 1, True), clf)
+        elif method == "tree":
+            decisionTree.predict(trackName, artistName, collectData({artistName: [(input, trackName)]}, 1, True), clf)
     elif job == "selection":
+        from utils import features
+
         if type is None or type not in ("tree", "random", "extra"):
             print "Please specify the kind of feature selection model ('-t tree' or '-t random' or '-t extra')"
             sys.exit(2)
-        if size is None:
-            size = 8000
         if n_iter is None:
             n_iter = 10
         if ratio is None:
@@ -402,3 +414,32 @@ if __name__ == "__main__":
         from learning.svm import test
 
         test.test()
+    elif job == "test":
+        if pickle_file is None:
+            root = Tkinter.Tk()
+            root.withdraw()
+            pickle_file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
+                                                       defaultextension="pkl",
+                                                       filetypes=[("Pickle Files", "*.pkl")])
+            root.destroy()
+        else:
+            if os.path.isfile(pickle_file):
+                if not input.endswith("pkl"):
+                    print "Sorry, only pkl-files are supported"
+                    sys.exit(2)
+            else:
+                print "Sorry, the path seems to be incorrect..."
+                sys.exit(2)
+        clf = joblib.load(pickle_file)
+
+    elif job == "grid_search":
+        conf = OrderedDict([
+            ('datasets', size),
+            ('epochs', (10, 20))
+        ])
+        clf = neuralNetwork.train(conf, plot_path, debug=debug, verbose=verbose)
+        final_attributes = []
+        for l in clf._final_estimator.get_parameters():
+            final_attributes.append({'layer': l.layer, 'weights': l.weights, 'biases': l.biases})
+        clf.final_attributes = final_attributes
+        joblib.dump(clf, output, compress=1)

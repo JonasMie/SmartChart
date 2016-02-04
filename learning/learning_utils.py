@@ -1,6 +1,7 @@
-import sqlite3
-
 import math
+import sqlite3
+from math import sin, cos, pi
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -8,25 +9,54 @@ import pydot
 from matplotlib import cm
 from sklearn import tree
 from sklearn.externals.six import StringIO
-from sklearn.preprocessing import Imputer
-from math import sin, cos, pi
-from utils import features
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.preprocessing import Imputer, StandardScaler, MinMaxScaler, FunctionTransformer
+from sklearn.utils import check_array
+from termcolor import colored
 
+import utils
 
 con = sqlite3.connect('data.db')
 
-colors = ['r', 'b', 'g', 'y']
+booleans = ("track_genre_electronic", "track_genre_pop", "track_genre_hiphop", "track_genre_rock", "track_genre_other",
+            "artist_genre_electronic", "artist_genre_pop", "artist_genre_hiphop", "artist_genre_rock",
+            "artist_genre_other" "available_on_spotify_in_ger", "exists_remix", "is_2010s", "is_2000s", "is_1990s",
+            "is_1980s", "is_other_decade", "is_male", "is_female", "is_group", "german", "american", "other_country",
+            "mean_chart_peak_0", "mean_chart_peak_1", "mean_chart_peak_2", "mean_chart_peak_3", "mean_chart_peak_4",
+            "mean_chart_peak_5", "mean_chart_peak_6", "mean_album_chart_peak_0", "mean_album_chart_peak_1",
+            "mean_album_chart_peak_2", "mean_album_chart_peak_3", "mean_album_chart_peak_4", "mean_album_chart_peak_5",
+            "mean_album_chart_peak_6")
+
+colors = ['r', 'b', 'g', 'c', 'm', 'y']
 ylabels = {'mse': 'mean squared error', 'mcc': 'mean categorical cross-entropy'}
+
+
+class CustomFunctionTransformer(FunctionTransformer):
+    def __init__(self, func):
+        super(CustomFunctionTransformer, self).__init__(func=func)
+        self.predict_proba = None
+
+    def fit(self, X, y=None):
+        if self.validate:
+            check_array(X, self.accept_sparse, force_all_finite=False)
+        return self
+
+    def transform(self, X, y=None):
+        if self.validate:
+            check_array(X, self.accept_sparse, force_all_finite=False)
+        func = self.func
+
+        return func(X, *((y,) if self.pass_y else ()))
 
 
 def getDecisionData(n_rows, ratio=1):
     non_charts = pd.read_sql_query(
-            "SELECT track.genre_electronic, track.genre_pop, track.genre_hiphop, track.genre_rock, track.genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std , artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.breaking_years, artist.life_span, artist.genre_electronic, artist.genre_pop, artist.genre_hiphop, artist.genre_rock, artist.genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND peak_cat = 0  ORDER BY RANDOM() LIMIT {}".format(
-                    n_rows), con)
+        "SELECT track.genre_electronic, track.genre_pop, track.genre_hiphop, track.genre_rock, track.genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std , artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.breaking_years, artist.life_span, artist.genre_electronic, artist.genre_pop, artist.genre_hiphop, artist.genre_rock, artist.genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND peak_cat = 0  ORDER BY RANDOM() LIMIT {}".format(
+            n_rows), con)
 
     charts = pd.read_sql_query(
-            "SELECT track.genre_electronic, track.genre_pop, track.genre_hiphop, track.genre_rock,track.genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11,track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std , artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.breaking_years, artist.life_span, artist.genre_electronic, artist.genre_pop, artist.genre_hiphop, artist.genre_rock, artist.genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak, artist.mean_chart_weeks, artist.total_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND peak_cat != 0 ORDER BY RANDOM() LIMIT {}".format(
-                    n_rows), con)
+        "SELECT track.genre_electronic, track.genre_pop, track.genre_hiphop, track.genre_rock,track.genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11,track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std , artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.breaking_years, artist.life_span, artist.genre_electronic, artist.genre_pop, artist.genre_hiphop, artist.genre_rock, artist.genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak, artist.mean_chart_weeks, artist.total_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND peak_cat != 0 ORDER BY RANDOM() LIMIT {}".format(
+            n_rows), con)
 
     complete_set = pd.concat([non_charts, charts])
     targets = complete_set['peak_cat']
@@ -37,9 +67,9 @@ def getDecisionData(n_rows, ratio=1):
 
 def selectData(id):
     data = pd.read_sql_query(
-            "SELECT track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.id = {}".format(
-                    id),
-            con)
+        "SELECT track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.id = {}".format(
+            id),
+        con)
     return data
 
 
@@ -61,30 +91,30 @@ def getData(n_rows, type=None, split=True, balanced=False, complete=False, shuff
         n_rows = int(n_rows / 7)
         # data = pd.DataFrame(np.zeros(shape=(116,n_rows)))
         data = pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(0), n_rows),
-                con)
+            query.format(clause, "AND peak_cat= {}".format(0), n_rows),
+            con)
         data = data.append(pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(1), n_rows),
-                con))
+            query.format(clause, "AND peak_cat= {}".format(1), n_rows),
+            con))
         data = data.append(pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(2), n_rows),
-                con))
+            query.format(clause, "AND peak_cat= {}".format(2), n_rows),
+            con))
         data = data.append(pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(3), n_rows),
-                con))
+            query.format(clause, "AND peak_cat= {}".format(3), n_rows),
+            con))
         data = data.append(pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(4), n_rows),
-                con))
+            query.format(clause, "AND peak_cat= {}".format(4), n_rows),
+            con))
         data = data.append(pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(5), n_rows),
-                con))
+            query.format(clause, "AND peak_cat= {}".format(5), n_rows),
+            con))
         data = data.append(pd.read_sql_query(
-                query.format(clause, "AND peak_cat= {}".format(6), n_rows),
-                con))
+            query.format(clause, "AND peak_cat= {}".format(6), n_rows),
+            con))
     else:
         data = pd.read_sql_query(
-                query.format(clause, "", n_rows),
-                con)
+            query.format(clause, "", n_rows),
+            con)
 
     if shuffle:
         data.reindex(np.random.permutation(data.index))
@@ -93,6 +123,67 @@ def getData(n_rows, type=None, split=True, balanced=False, complete=False, shuff
     targets = data['peak_cat']
     data.drop('peak_cat', axis=1, inplace=True)
     return data, targets
+
+
+def predict(trackName, artistName, track_id, clf):
+    data = selectData(track_id)
+    y = data.iloc[0]['peak_cat']
+    x = data.drop('peak_cat', axis=1)
+    res = clf.predict_proba(x)
+
+    print "\nPrediction for {} by {} successfully completed\n\n".format(trackName, artistName)
+
+    match = y == res.argmax()
+    print colored("Target category:       {}".format(y), 'green' if match else 'red')
+    print colored("Predicted category:    {}".format(res.argmax()), 'green' if match else 'red')
+
+    print "\n\n"
+    for cat, prob in enumerate(res[0]):
+        if cat == res.argmax() or cat == y:
+            if match:
+                color = 'green'
+            else:
+                color = 'red'
+        else:
+            color = 'blue'
+        print colored("Category {}:    {:.3f}%".format(cat, prob * 100), color)
+
+
+def get_booleans(X):
+    bools = [x for x in X.columns.values if x in booleans]
+    return np.array(X[bools])
+
+
+def get_continuous(X):
+    continuous = [x for x in X.columns.values if x not in booleans]
+    return np.array(X[continuous])
+
+
+def getPipeline(data, classifier, name):
+    union = [
+        ('continousPipeline', Pipeline([
+            ('continousSelector', CustomFunctionTransformer(get_continuous)),
+            ('cont_imputer', Imputer()),
+            ('scaler', StandardScaler()),
+        ])),
+    ]
+
+    if [i for i in data if i in booleans]:
+        # strat = "most_frequent"
+        strat = "mean"
+        union.append(
+            ('booleanPipeline', Pipeline([
+                ('boolean_transformer', CustomFunctionTransformer(get_booleans)),
+                ('bool_imputer', Imputer(strategy=strat)),
+                ('boolean_scaler', MinMaxScaler(feature_range=(-1, 1))),
+            ])),
+        )
+
+    features = FeatureUnion(union)
+    return Pipeline([
+        ('features', features),
+        (name, classifier)
+    ])
 
 
 def impute(data):
@@ -128,6 +219,8 @@ def plot_lines(data, labels, xlabel, ylabel, title, suptitle, conf=None, additio
                         v = "true"
                     else:
                         v = "false"
+                if k == "unitrange" and v is None:
+                    continue
                 if k == 'n_input':
                     keys.append(offsetbox.TextArea(r"$features$"))
                     vals.append(offsetbox.TextArea(r"${}$".format(v), textprops={'size': 10}))
@@ -225,7 +318,7 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
     indices = np.append(indices, "rest")
 
     md = 'red'
-    mir= 'blue'
+    mir = 'blue'
     gray = 'gray'
 
     new_indices = []
@@ -233,9 +326,10 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
 
     for i, ind in enumerate(indices):
         new_indices.append("{} ({:.2f} %)".format(ind, sizes[i]))
-        if ordered_features[i] in features['mir']:
+        if ordered_features[i] in utils.features['mir']:
             colors.append(mir)
-        elif ordered_features[i] in features['metadata_artist'] or ordered_features[i] in features['metadata_track']:
+        elif ordered_features[i] in utils.features['metadata_artist'] or ordered_features[i] in utils.features[
+            'metadata_track']:
             colors.append(md)
         else:
             colors.append(gray)

@@ -4,9 +4,7 @@ import math
 
 import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.preprocessing import FunctionTransformer, Imputer, StandardScaler, MinMaxScaler
-from sklearn.utils import check_array
+from sklearn.grid_search import GridSearchCV
 from sknn.mlp import Classifier, Layer
 from termcolor import colored
 
@@ -29,94 +27,26 @@ unit_iter_valid_error = []
 unit_iter_best_train_error = []
 unit_iter_best_valid_error = []
 
-booleans = ("track_genre_electronic", "track_genre_pop", "track_genre_hiphop", "track_genre_rock", "track_genre_other",
-            "artist_genre_electronic", "artist_genre_pop", "artist_genre_hiphop", "artist_genre_rock",
-            "artist_genre_other" "available_on_spotify_in_ger", "exists_remix", "is_2010s", "is_2000s", "is_1990s",
-            "is_1980s", "is_other_decade", "is_male", "is_female", "is_group", "german", "american", "other_country",
-            "mean_chart_peak_0", "mean_chart_peak_1", "mean_chart_peak_2", "mean_chart_peak_3", "mean_chart_peak_4",
-            "mean_chart_peak_5", "mean_chart_peak_6", "mean_album_chart_peak_0", "mean_album_chart_peak_1",
-            "mean_album_chart_peak_2", "mean_album_chart_peak_3", "mean_album_chart_peak_4", "mean_album_chart_peak_5",
-            "mean_album_chart_peak_6")
-
-
-class CustomFunctionTransformer(FunctionTransformer):
-    def __init__(self, func):
-        super(CustomFunctionTransformer, self).__init__(func=func)
-        self.predict_proba = None
-
-    def fit(self, X, y=None):
-        if self.validate:
-            check_array(X, self.accept_sparse, force_all_finite=False)
-        return self
-
-    def transform(self, X, y=None):
-        if self.validate:
-            check_array(X, self.accept_sparse, force_all_finite=False)
-        func = self.func
-
-        return func(X, *((y,) if self.pass_y else ()))
-
-
-n = 0
-
-
-def get_booleans(X):
-    bools = [x for x in X.columns.values if x in booleans]
-    return np.array(X[bools])
-
-
-def get_continuous(X):
-    continuous = [x for x in X.columns.values if x not in booleans]
-    return np.array(X[continuous])
-
-
-def getPipeline(data, classifier):
-    global config
-    union = [
-        ('continousPipeline', Pipeline([
-            ('continousSelector', CustomFunctionTransformer(get_continuous)),
-            ('cont_imputer', Imputer()),
-            ('scaler', StandardScaler()),
-        ])),
-    ]
-
-    if [i for i in data if i in booleans]:
-        strat = "most_frequent"
-        # strat = "mean"
-        union.append(
-                ('booleanPipeline', Pipeline([
-                    ('boolean_transformer', CustomFunctionTransformer(get_booleans)),
-                    # ('boolean_scaler', MinMaxScaler(feature_range=(-1,1))),
-                    ('bool_imputer', Imputer(strategy=strat)),
-                ])),
-        )
-
-    features = FeatureUnion(union)
-    return Pipeline([
-        ('features', features),
-        ('neural network', classifier)
-    ])
-
 
 def getNet(units, learning_rate, n_iter, learning_rule, batch_size, weight_decay, dropout_rate, loss_type, n_stable,
            debug, verbose, callbacks, valid_size):
     layers = [Layer(type="Sigmoid", units=u) for u in units]
     layers.append(Layer(type="Softmax"))
     return Classifier(
-            layers=layers,
-            learning_rate=learning_rate,
-            n_iter=n_iter,
-            learning_rule=learning_rule,
-            batch_size=batch_size,
-            weight_decay=weight_decay,
-            dropout_rate=dropout_rate,
-            loss_type=loss_type,
-            n_stable=n_stable,
-            debug=debug,
-            verbose=verbose,
-            callback=callbacks,
-            # valid_set=valid_set
-            valid_size=valid_size
+        layers=layers,
+        learning_rate=learning_rate,
+        n_iter=n_iter,
+        learning_rule=learning_rule,
+        batch_size=batch_size,
+        weight_decay=weight_decay,
+        dropout_rate=dropout_rate,
+        loss_type=loss_type,
+        n_stable=n_stable,
+        debug=debug,
+        verbose=verbose,
+        callback=callbacks,
+        # valid_set=valid_set
+        valid_size=valid_size
     )
 
 
@@ -192,11 +122,15 @@ default_callbacks = {
 }
 
 
-def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
+def train(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_callbacks):
     global config, plot, train_errors, valid_errors
     plot = plot_path
-    train_errors = np.zeros(conf['epochs'])
-    valid_errors = np.zeros(conf['epochs'])
+    if 'neural_network__n_iter' in gs_params:
+        train_errors = np.zeros(20)
+        valid_errors = np.zeros(20)
+    else:
+        train_errors = np.zeros(conf['epochs'])
+        valid_errors = np.zeros(conf['epochs'])
     training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, conf['features'],
                                                                          balanced=conf['balanced'], type=conf['type'])
 
@@ -216,7 +150,7 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
                          callbacks=callbacks,
                          valid_size=conf['ratio']
                          )
-            pipeline = getPipeline(training_data, net)
+            pipeline = utils.getPipeline(training_data, net, 'neural_network')
             pipeline.fit(training_data, training_targets)
         utils.plot_lines(data=[unit_iter_train_error, unit_iter_valid_error],
                          labels=["Training error", "Validation error"],
@@ -249,30 +183,61 @@ def train(conf, plot_path, debug, verbose, callbacks=default_callbacks):
                      # valid_set=(valid_data, valid_targets)
                      valid_size=conf['ratio']
                      )
+        pipeline = utils.getPipeline(training_data, net)
 
-        pipeline = getPipeline(training_data, net)
+        if gs_params:
+            gs = GridSearchCV(pipeline, param_grid=gs_params)
+            return gs.fit(training_data, training_targets)
+
         return pipeline.fit(training_data, training_targets)
 
 
 def predict(trackName, artistName, track_id, clf):
-    data = utils.selectData(track_id)
-    y = data.iloc[0]['peak_cat']
-    x = data.drop('peak_cat', axis=1)
-    res = clf.predict_proba(x)
+    utils.predict(trackName, artistName, track_id, clf)
 
-    print "\nPrediction for {} by {} successfully completed\n\n".format(trackName, artistName)
 
-    match = y == res.argmax()
-    print colored("Target category:       {}".format(y), 'green' if match else 'red')
-    print colored("Predicted category:    {}".format(res.argmax()), 'green' if match else 'red')
+def train_custom(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_callbacks):
+    global config, plot, train_errors, valid_errors
+    plot = plot_path
 
-    print "\n\n"
-    for cat, prob in enumerate(res[0]):
-        if cat == res.argmax() or cat == y:
-            if match:
-                color = 'green'
-            else:
-                color = 'red'
+    train_errors = np.zeros(conf['epochs'])
+    valid_errors = np.zeros(conf['epochs'])
+    all_ = list()
+    for x in ['all', 'md', 'mir', 'feat_sel', 'random']:
+        all = list()
+        if x in ('all', 'md', 'mir'):
+            training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, None,
+                                                                                 None, type=x)
+        elif x == 'random':
+            from utils import features
+            import random
+            conf['features'] = random.sample(np.hstack(features.values()), random.randint(1, 115))
+            training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, conf['features'],
+                                                                                 balanced=conf['balanced'], type=x)
         else:
-            color = 'blue'
-        print colored("Category {}:    {:.3f}%".format(cat, prob * 100), color)
+            training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, conf['features'],
+                                                                                 balanced=conf['balanced'], type=x)
+
+        # if there is not enough data available
+        conf['datasets'] = training_data.shape[0]
+        if conf['units'] is None:
+            conf['units'] = [int(math.ceil((training_data.shape[1] + 7) / 2))]
+        conf['n_input'] = training_data.shape[1]
+        config = conf
+        units = [int(math.ceil((training_data.shape[1] + 7) / 2))]
+        for i in range(1, 101):
+            net = getNet(units, conf['learning_rate'], conf['epochs'], conf['learning_rule'],
+                         conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
+                         conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose,
+                         callbacks=callbacks,
+                         # valid_set=(valid_data, valid_targets)
+                         valid_size=conf['ratio']
+                         )
+            pipeline = utils.getPipeline(training_data, net)
+            pipeline.fit(training_data, training_targets)
+            all.append(valid_errors)
+        all_.append(np.array(all).mean(axis=0))
+    utils.plot_lines(data=all_, labels=["all", "md", "mir", "feat_sel", "random"],
+                     xlabel="number of epochs",
+                     ylabel=config['loss_type'],
+                     title="mean training and validation error", suptitle=None, path="learning/nn/plots/comb/test.png")
