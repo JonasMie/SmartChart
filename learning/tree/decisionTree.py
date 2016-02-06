@@ -1,6 +1,7 @@
 import numpy as np
-from sklearn import tree
-from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+from sklearn import cross_validation
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 from learning import learning_utils
@@ -10,8 +11,13 @@ def train(conf):
     training_data, training_targets = learning_utils.getData(conf['datasets'], type=conf['type'], split=True,
                                                              balanced=conf['balanced'], shuffle=True)
 
-    clf = tree.DecisionTreeClassifier(criterion=conf['criterion'], splitter='best')
+    #clf = tree.DecisionTreeClassifier(criterion=conf['criterion'], splitter='best', max_depth=12)
+    clf = RandomForestClassifier(criterion=conf['criterion'], max_depth=12)
     pipeline = learning_utils.getPipeline(training_data, clf, 'decision_tree')
+
+    scores = cross_validation.cross_val_score(pipeline, training_data, training_targets, cv=5)
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+
     return pipeline.fit(training_data, training_targets), training_data.columns.values
 
 
@@ -51,3 +57,8 @@ def tree_feat_sel(X, y, feature_names, type, trees=None, threshold=None, plot=Tr
     if threshold:
         return features
     return indices
+
+
+def scores(clf):
+    scores = cross_validation.cross_val_score(clf, training_data, training_targets, cv=5)
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))

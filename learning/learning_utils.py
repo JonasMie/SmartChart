@@ -1,3 +1,4 @@
+# coding=utf-8
 import math
 import sqlite3
 from math import sin, cos, pi
@@ -65,88 +66,122 @@ def getDecisionData(n_rows, ratio=1):
     return complete_set, targets
 
 
-def selectData(id):
+def selectData(id, exclude=False, names=True):
+    if isinstance(id, int):
+        clause = "{}= {} ".format("!" if exclude else "", id)
+    else:
+        clause = "{} IN {} ".format("NOT" if exclude else "", tuple(id))
+
+    name = ",track.name AS track_name, artist.name AS artist_name " if names else ""
     data = pd.read_sql_query(
-        "SELECT track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.id = {}".format(
-            id),
+        "SELECT track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks {} FROM track JOIN artist ON track.artist_id = artist.id WHERE track.id {}".format(
+            name, clause),
         con)
     return data
 
 
-def getData(n_rows, type=None, split=True, balanced=False, complete=False, shuffle=True):
+def getData(n_rows, type=None, ratio=1, split=True, balanced=False, complete=False, shuffle=True, ids=None,
+            return_ids=False):
+    # todo :ratio
     if n_rows is None:
         n_rows = -1
+        # todo: all
+    else:
+        all = n_rows
     if type == "md":
-        query = "SELECT track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND artist.error=0 {} {} ORDER BY RANDOM() LIMIT {}"
+        query = "SELECT {} track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND artist.error=0 {} {} {} ORDER BY RANDOM() LIMIT {}"
         clause = "AND track.genre_electronic IS NOT NULL AND track.genre_pop IS NOT NULL AND track.genre_hiphop IS NOT NULL AND track.genre_rock IS NOT NULL AND track.genre_other IS NOT NULL AND track.is_1980s IS NOT NULL AND  track.is_1990s IS NOT NULL AND  track.is_2000s IS NOT NULL AND  track.is_2010s IS NOT NULL AND  track.is_other_decade IS NOT NULL AND   track.length IS NOT NULL AND  track.peak_cat IS NOT NULL AND  artist.is_male IS NOT NULL AND  artist.is_female IS NOT NULL AND  artist.is_group IS NOT NULL AND  artist.german IS NOT NULL AND  artist.american IS NOT NULL AND  artist.other_country IS NOT NULL AND  artist.total_years IS NOT NULL AND  artist.life_span IS NOT NULL AND  artist.genre_electronic IS NOT NULL AND  artist.genre_pop IS NOT NULL AND  artist.genre_hiphop IS NOT NULL AND  artist.genre_rock IS NOT NULL AND  artist.genre_other IS NOT NULL AND  artist.followers IS NOT NULL AND  artist.listener IS NOT NULL AND  artist.play_count IS NOT NULL AND  artist.popularity IS NOT NULL AND  artist.mean_chart_peak_0 IS NOT NULL AND  artist.mean_chart_peak_1 IS NOT NULL AND  artist.mean_chart_peak_2 IS NOT NULL AND  artist.mean_chart_peak_3 IS NOT NULL AND  artist.mean_chart_peak_4 IS NOT NULL AND  artist.mean_chart_peak_5 IS NOT NULL AND  artist.mean_chart_peak_6 IS NOT NULL AND  artist.mean_chart_weeks IS NOT NULL AND  artist.total_chart_weeks IS NOT NULL AND  artist.mean_album_chart_peak_0 IS NOT NULL AND  artist.mean_album_chart_peak_1 IS NOT NULL AND  artist.mean_album_chart_peak_2 IS NOT NULL AND  artist.mean_album_chart_peak_3 IS NOT NULL AND  artist.mean_album_chart_peak_4 IS NOT NULL AND  artist.mean_album_chart_peak_5 IS NOT NULL AND  artist.mean_album_chart_peak_6 IS NOT NULL AND  artist.mean_album_chart_weeks IS NOT NULL AND  artist.total_album_chart_weeks IS NOT NULL"
     elif type == "mir":
-        query = "SELECT track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std,track.peak_cat FROM track WHERE track.eoe NOT  NULL AND peak_cat NOT NULL {} {} ORDER BY RANDOM() LIMIT {}"
+        query = "SELECT {} track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std,track.peak_cat FROM track WHERE track.eoe NOT  NULL AND peak_cat NOT NULL {} {} {} ORDER BY RANDOM() LIMIT {}"
         clause = "AND track.zcr IS NOT NULL AND  track.zcr_std IS NOT NULL AND  track.nrg IS NOT NULL AND  track.nrg_std IS NOT NULL AND  track.pow IS NOT NULL AND  track.pow_std IS NOT NULL AND  track.acr IS NOT NULL AND  track.acr_std IS NOT NULL AND  track.acr_lag IS NOT NULL AND  track.acr_lag_std IS NOT NULL AND  track.cent IS NOT NULL AND  track.cent_std IS NOT NULL AND  track.flx IS NOT NULL AND  track.flx_std IS NOT NULL AND  track.rlf IS NOT NULL AND  track.rlf_std IS NOT NULL AND  track.eoe IS NOT NULL AND  track.eoe_std IS NOT NULL AND  track.eoe_min IS NOT NULL AND  track.mfcc_0 IS NOT NULL AND  track.mfcc_1 IS NOT NULL AND  track.mfcc_2 IS NOT NULL AND  track.mfcc_3 IS NOT NULL AND  track.mfcc_4 IS NOT NULL AND  track.mfcc_5 IS NOT NULL AND  track.mfcc_6 IS NOT NULL AND  track.mfcc_7 IS NOT NULL AND  track.mfcc_8 IS NOT NULL AND  track.mfcc_9 IS NOT NULL AND  track.mfcc_10 IS NOT NULL AND  track.mfcc_11 IS NOT NULL AND  track.mfcc_12 IS NOT NULL AND  track.chr_0 IS NOT NULL AND  track.chr_1 IS NOT NULL AND  track.chr_2 IS NOT NULL AND  track.chr_3 IS NOT NULL AND  track.chr_4 IS NOT NULL AND  track.chr_5 IS NOT NULL AND  track.chr_6 IS NOT NULL AND  track.chr_7 IS NOT NULL AND  track.chr_8 IS NOT NULL AND  track.chr_9 IS NOT NULL AND  track.chr_10 IS NOT NULL AND  track.chr_11 IS NOT NULL AND  track.mfcc_0_std IS NOT NULL AND  track.mfcc_1_std IS NOT NULL AND  track.mfcc_2_std IS NOT NULL AND  track.mfcc_3_std IS NOT NULL AND  track.mfcc_4_std IS NOT NULL AND  track.mfcc_5_std IS NOT NULL AND  track.mfcc_6_std IS NOT NULL AND  track.mfcc_7_std IS NOT NULL AND  track.mfcc_8_std IS NOT NULL AND  track.mfcc_9_std IS NOT NULL AND  track.mfcc_10_std IS NOT NULL AND  track.mfcc_11_std IS NOT NULL AND  track.mfcc_12_std IS NOT NULL AND  track.chr_0_std IS NOT NULL AND  track.chr_1_std IS NOT NULL AND  track.chr_2_std IS NOT NULL AND  track.chr_3_std IS NOT NULL AND  track.chr_4_std IS NOT NULL AND  track.chr_5_std IS NOT NULL AND  track.chr_6_std IS NOT NULL AND  track.chr_7_std IS NOT NULL AND  track.chr_8_std IS NOT NULL AND  track.chr_9_std IS NOT NULL AND  track.chr_10_std IS NOT NULL AND  track.chr_11_std IS NOT NULL AND track.peak_cat"
     else:
-        query = "SELECT track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND artist.error=0 AND track.zcr IS NOT NULL {} {} ORDER BY RANDOM() LIMIT {}"
+        query = "SELECT {} track.genre_electronic AS track_genre_electronic , track.genre_pop AS track_genre_pop, track.genre_hiphop AS track_genre_hiphop , track.genre_rock AS track_genre_rock, track.genre_other AS track_genre_other, track.is_1980s, track.is_1990s, track.is_2000s, track.is_2010s, track.is_other_decade,  track.length, track.peak_cat, track.zcr, track.zcr_std, track.nrg, track.nrg_std, track.pow, track.pow_std, track.acr, track.acr_std, track.acr_lag, track.acr_lag_std, track.cent, track.cent_std, track.flx, track.flx_std, track.rlf, track.rlf_std, track.eoe, track.eoe_std, track.eoe_min, track.mfcc_0, track.mfcc_1, track.mfcc_2, track.mfcc_3, track.mfcc_4, track.mfcc_5, track.mfcc_6, track.mfcc_7, track.mfcc_8, track.mfcc_9, track.mfcc_10, track.mfcc_11, track.mfcc_12, track.chr_0, track.chr_1, track.chr_2, track.chr_3, track.chr_4, track.chr_5, track.chr_6, track.chr_7, track.chr_8, track.chr_9, track.chr_10, track.chr_11, track.mfcc_0_std, track.mfcc_1_std, track.mfcc_2_std, track.mfcc_3_std, track.mfcc_4_std, track.mfcc_5_std, track.mfcc_6_std, track.mfcc_7_std, track.mfcc_8_std, track.mfcc_9_std, track.mfcc_10_std, track.mfcc_11_std, track.mfcc_12_std, track.chr_0_std, track.chr_1_std, track.chr_2_std, track.chr_3_std, track.chr_4_std, track.chr_5_std, track.chr_6_std, track.chr_7_std, track.chr_8_std, track.chr_9_std, track.chr_10_std, track.chr_11_std, artist.is_male, artist.is_female, artist.is_group, artist.german, artist.american, artist.other_country, artist.total_years, artist.life_span, artist.genre_electronic AS artist_genre_electronic, artist.genre_pop AS artist_genre_pop, artist.genre_hiphop AS artist_genre_hiphop, artist.genre_rock AS artist_genre_rock, artist.genre_other AS artist_genre_other, artist.followers, artist.listener, artist.play_count, artist.popularity, artist.mean_chart_peak_0, artist.mean_chart_peak_1, artist.mean_chart_peak_2, artist.mean_chart_peak_3, artist.mean_chart_peak_4, artist.mean_chart_peak_5, artist.mean_chart_peak_6, artist.mean_chart_weeks, artist.total_chart_weeks, artist.mean_album_chart_peak_0, artist.mean_album_chart_peak_1, artist.mean_album_chart_peak_2, artist.mean_album_chart_peak_3, artist.mean_album_chart_peak_4, artist.mean_album_chart_peak_5, artist.mean_album_chart_peak_6, artist.mean_album_chart_weeks, artist.total_album_chart_weeks FROM track JOIN artist ON track.artist_id = artist.id WHERE track.error = 0 AND artist.error=0 AND track.zcr IS NOT NULL {} {} {} ORDER BY RANDOM() LIMIT {}"
         clause = "AND track.genre_electronic IS NOT NULL AND track.genre_pop IS NOT NULL AND track.genre_hiphop IS NOT NULL AND track.genre_rock IS NOT NULL AND track.genre_other IS NOT NULL AND track.is_1980s IS NOT NULL AND  track.is_1990s IS NOT NULL AND  track.is_2000s IS NOT NULL AND  track.is_2010s IS NOT NULL AND  track.is_other_decade IS NOT NULL AND   track.length IS NOT NULL AND  track.peak_cat IS NOT NULL AND  artist.is_male IS NOT NULL AND  artist.is_female IS NOT NULL AND  artist.is_group IS NOT NULL AND  artist.german IS NOT NULL AND  artist.american IS NOT NULL AND  artist.other_country IS NOT NULL AND  artist.total_years IS NOT NULL AND  artist.life_span IS NOT NULL AND  artist.genre_electronic IS NOT NULL AND  artist.genre_pop IS NOT NULL AND  artist.genre_hiphop IS NOT NULL AND  artist.genre_rock IS NOT NULL AND  artist.genre_other IS NOT NULL AND  artist.followers IS NOT NULL AND  artist.listener IS NOT NULL AND  artist.play_count IS NOT NULL AND  artist.popularity IS NOT NULL AND  artist.mean_chart_peak_0 IS NOT NULL AND  artist.mean_chart_peak_1 IS NOT NULL AND  artist.mean_chart_peak_2 IS NOT NULL AND  artist.mean_chart_peak_3 IS NOT NULL AND  artist.mean_chart_peak_4 IS NOT NULL AND  artist.mean_chart_peak_5 IS NOT NULL AND  artist.mean_chart_peak_6 IS NOT NULL AND  artist.mean_chart_weeks IS NOT NULL AND  artist.total_chart_weeks IS NOT NULL AND  artist.mean_album_chart_peak_0 IS NOT NULL AND  artist.mean_album_chart_peak_1 IS NOT NULL AND  artist.mean_album_chart_peak_2 IS NOT NULL AND  artist.mean_album_chart_peak_3 IS NOT NULL AND  artist.mean_album_chart_peak_4 IS NOT NULL AND  artist.mean_album_chart_peak_5 IS NOT NULL AND  artist.mean_album_chart_peak_6 IS NOT NULL AND  artist.mean_album_chart_weeks IS NOT NULL AND  artist.total_album_chart_weeks IS NOT NULL AND track.zcr IS NOT NULL AND  track.zcr_std IS NOT NULL AND  track.nrg IS NOT NULL AND  track.nrg_std IS NOT NULL AND  track.pow IS NOT NULL AND  track.pow_std IS NOT NULL AND  track.acr IS NOT NULL AND  track.acr_std IS NOT NULL AND  track.acr_lag IS NOT NULL AND  track.acr_lag_std IS NOT NULL AND  track.cent IS NOT NULL AND  track.cent_std IS NOT NULL AND  track.flx IS NOT NULL AND  track.flx_std IS NOT NULL AND  track.rlf IS NOT NULL AND  track.rlf_std IS NOT NULL AND  track.eoe IS NOT NULL AND  track.eoe_std IS NOT NULL AND  track.eoe_min IS NOT NULL AND  track.mfcc_0 IS NOT NULL AND  track.mfcc_1 IS NOT NULL AND  track.mfcc_2 IS NOT NULL AND  track.mfcc_3 IS NOT NULL AND  track.mfcc_4 IS NOT NULL AND  track.mfcc_5 IS NOT NULL AND  track.mfcc_6 IS NOT NULL AND  track.mfcc_7 IS NOT NULL AND  track.mfcc_8 IS NOT NULL AND  track.mfcc_9 IS NOT NULL AND  track.mfcc_10 IS NOT NULL AND  track.mfcc_11 IS NOT NULL AND  track.mfcc_12 IS NOT NULL AND  track.chr_0 IS NOT NULL AND  track.chr_1 IS NOT NULL AND  track.chr_2 IS NOT NULL AND  track.chr_3 IS NOT NULL AND  track.chr_4 IS NOT NULL AND  track.chr_5 IS NOT NULL AND  track.chr_6 IS NOT NULL AND  track.chr_7 IS NOT NULL AND  track.chr_8 IS NOT NULL AND  track.chr_9 IS NOT NULL AND  track.chr_10 IS NOT NULL AND  track.chr_11 IS NOT NULL AND  track.mfcc_0_std IS NOT NULL AND  track.mfcc_1_std IS NOT NULL AND  track.mfcc_2_std IS NOT NULL AND  track.mfcc_3_std IS NOT NULL AND  track.mfcc_4_std IS NOT NULL AND  track.mfcc_5_std IS NOT NULL AND  track.mfcc_6_std IS NOT NULL AND  track.mfcc_7_std IS NOT NULL AND  track.mfcc_8_std IS NOT NULL AND  track.mfcc_9_std IS NOT NULL AND  track.mfcc_10_std IS NOT NULL AND  track.mfcc_11_std IS NOT NULL AND  track.mfcc_12_std IS NOT NULL AND  track.chr_0_std IS NOT NULL AND  track.chr_1_std IS NOT NULL AND  track.chr_2_std IS NOT NULL AND  track.chr_3_std IS NOT NULL AND  track.chr_4_std IS NOT NULL AND  track.chr_5_std IS NOT NULL AND  track.chr_6_std IS NOT NULL AND  track.chr_7_std IS NOT NULL AND  track.chr_8_std IS NOT NULL AND  track.chr_9_std IS NOT NULL AND  track.chr_10_std IS NOT NULL AND  track.chr_11_std IS NOT NULL AND track.peak_cat"
 
     clause = clause if complete else ""
+    sel_ids = "track.id, " if return_ids else ""
+    in_ids = "AND track.id NOT IN {}".format(tuple(ids.values)) if ids is not None else ""
     if balanced:
         n_rows = int(n_rows / 7)
         # data = pd.DataFrame(np.zeros(shape=(116,n_rows)))
         data = pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(0), n_rows),
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(0), in_ids, n_rows),
             con)
         data = data.append(pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(1), n_rows),
-            con))
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(1), in_ids, n_rows),
+            con), ignore_index=True)
         data = data.append(pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(2), n_rows),
-            con))
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(2), in_ids, n_rows),
+            con), ignore_index=True)
         data = data.append(pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(3), n_rows),
-            con))
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(3), in_ids, n_rows),
+            con), ignore_index=True)
         data = data.append(pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(4), n_rows),
-            con))
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(4), in_ids, n_rows),
+            con), ignore_index=True)
         data = data.append(pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(5), n_rows),
-            con))
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(5), in_ids, n_rows),
+            con), ignore_index=True)
         data = data.append(pd.read_sql_query(
-            query.format(clause, "AND peak_cat= {}".format(6), n_rows),
-            con))
+            query.format(sel_ids, clause, "AND peak_cat= {}".format(6), in_ids, n_rows),
+            con), ignore_index=True)
     else:
         data = pd.read_sql_query(
-            query.format(clause, "", n_rows),
+            query.format(sel_ids, clause, "", in_ids, n_rows),
             con)
 
     if shuffle:
         data.reindex(np.random.permutation(data.index))
+
+    if return_ids:
+        id_col = data['id']
+        data.drop('id', axis=1, inplace=True)
+
     if not split:
-        return data
+        return (data, id_col) if return_ids else data
     targets = data['peak_cat']
     data.drop('peak_cat', axis=1, inplace=True)
-    return data, targets
+    return (data, targets, id_col) if return_ids else (data, targets)
 
 
-def predict(trackName, artistName, track_id, clf):
-    data = selectData(track_id)
-    y = data.iloc[0]['peak_cat']
-    x = data.drop('peak_cat', axis=1)
-    res = clf.predict_proba(x)
+def predict(conf, clf, proba=True, names=True):
+    if conf['type'] != "file":
+        ids = clf._final_estimator.ids
+        data = selectData(ids, True)
+    else:
+        data = selectData(conf['id'])
 
-    print "\nPrediction for {} by {} successfully completed\n\n".format(trackName, artistName)
+    targets = data['peak_cat']
+    tracks = data['track_name']
+    artists = data['artist_name']
 
-    match = y == res.argmax()
-    print colored("Target category:       {}".format(y), 'green' if match else 'red')
-    print colored("Predicted category:    {}".format(res.argmax()), 'green' if match else 'red')
+    data.drop(['peak_cat', 'track_name', 'artist_name'], axis=1, inplace=True)
 
-    print "\n\n"
-    for cat, prob in enumerate(res[0]):
-        if cat == res.argmax() or cat == y:
-            if match:
-                color = 'green'
-            else:
-                color = 'red'
-        else:
-            color = 'blue'
-        print colored("Category {}:    {:.3f}%".format(cat, prob * 100), color)
+    # for track in data.iterrows()
+    if (proba):
+        res = clf.predict_proba(data)
+    else:
+        res = clf.predict(data)
+
+    for i in range(len(res)):
+        print u"\nPrediction for {} by {} successfully completed\n\n".format(tracks[i], artists[i])
+
+        c = res[i].argmax() if proba else res[i]
+        match = targets[i] == c
+        print colored("Target category:       {}".format(targets[i]), 'green' if match else 'red')
+        print colored("Predicted category:    {}".format(c), 'green' if match else 'red')
+
+        if (proba):
+            print "\n\n"
+            for cat, prob in enumerate(res[0]):
+                if cat == res.argmax() or cat == targets[i]:
+                    if match:
+                        color = 'green'
+                    else:
+                        color = 'red'
+                else:
+                    color = 'blue'
+                print colored("Category {}:    {:.3f}%".format(cat, prob * 100), color)
 
 
 def get_booleans(X):
@@ -219,14 +254,13 @@ def plot_lines(data, labels, xlabel, ylabel, title, suptitle, conf=None, additio
                         v = "true"
                     else:
                         v = "false"
-                if k == "unitrange" and v is None:
-                    continue
                 if k == 'n_input':
                     keys.append(offsetbox.TextArea(r"$features$"))
                     vals.append(offsetbox.TextArea(r"${}$".format(v), textprops={'size': 10}))
-                elif k == 'unit_range' and v is not None:
-                    keys.append(offsetbox.TextArea(r"$unit range$"))
-                    vals.append(offsetbox.TextArea(r"${}-{}$".format(v[0], v[1]), textprops={'size': 10}))
+                elif k == 'unit_range':
+                    if v is not None:
+                        keys.append(offsetbox.TextArea(r"$unit range$"))
+                        vals.append(offsetbox.TextArea(r"${}-{}$".format(v[0], v[1]), textprops={'size': 10}))
                 elif k == 'units':
                     keys.append(offsetbox.TextArea(r"$hidden\_layers$"))
                     vals.append(offsetbox.TextArea(r"${}$".format(len(v)), textprops={'size': 10}))

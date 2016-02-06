@@ -4,9 +4,9 @@ import math
 
 import numpy as np
 import pandas as pd
+from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
 from sknn.mlp import Classifier, Layer
-from termcolor import colored
 
 import learning.learning_utils as utils
 
@@ -46,7 +46,8 @@ def getNet(units, learning_rate, n_iter, learning_rule, batch_size, weight_decay
         verbose=verbose,
         callback=callbacks,
         # valid_set=valid_set
-        valid_size=valid_size
+        valid_size=valid_size,
+        regularize='L2'
     )
 
 
@@ -84,6 +85,8 @@ def on_train_finish(**variables):
                          title="training and validation error", suptitle=None, conf=config, additionals=[
                 [best_train_i, variables['best_train_error']], [best_valid_i, variables['best_valid_error']]],
                          path=plot)
+    from sklearn.externals import joblib
+    joblib.dump(valid_errors, 'test.pkl', compress=1)
     if config['unit_range']:
         unit_iter_train_error.append(variables['avg_train_error'])
         unit_iter_valid_error.append(variables['avg_valid_error'])
@@ -183,7 +186,7 @@ def train(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_cal
                      # valid_set=(valid_data, valid_targets)
                      valid_size=conf['ratio']
                      )
-        pipeline = utils.getPipeline(training_data, net)
+        pipeline = utils.getPipeline(training_data, net, 'neural_network')
 
         if gs_params:
             gs = GridSearchCV(pipeline, param_grid=gs_params)
@@ -241,3 +244,18 @@ def train_custom(conf, plot_path, debug, verbose, gs_params=None, callbacks=defa
                      xlabel="number of epochs",
                      ylabel=config['loss_type'],
                      title="mean training and validation error", suptitle=None, path="learning/nn/plots/comb/test.png")
+
+
+def scores(conf):
+    training_data, training_targets = utils.getData(conf['datasets'], type=conf['type'], split=True,
+                                                    balanced=conf['balanced'], shuffle=True)
+    net = getNet(conf['units'], conf['learning_rate'], conf['epochs'], conf['learning_rule'],
+                 conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
+                 conf['loss_type'], n_stable=conf['n_stable'],
+                 callbacks=None, debug=False, verbose=True,
+                 # valid_set=(valid_data, valid_targets)
+                 valid_size=conf['ratio']
+                 )
+    pipeline = utils.getPipeline(training_data, net, 'neural_network')
+    scores = cross_validation.cross_val_score(pipeline, training_data, training_targets, cv=5)
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))

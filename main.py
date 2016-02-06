@@ -7,11 +7,11 @@ from collections import OrderedDict
 from mutagen.id3 import ID3
 from sklearn.externals import joblib
 
-import config
 from MIR.mir import *
 from dataCollector import *
 from learning.learning_utils import *
 from learning.nn import neuralNetwork
+from learning.svm import svc
 from learning.tree import decisionTree
 from utils import normalizeName
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         elif o in ("-S", "--stable"):
             n_stable = int(a)
         elif o in ("-B", "--balanced"):
-            balanced = bool(a)
+            balanced = bool(a)  # todo
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -254,7 +254,7 @@ if __name__ == "__main__":
             if plot_path is not None:
                 if plot_path == "":
                     plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
-                                             'type',
+                                             'units',
                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
                                                                                      learning_rate,
                                                                                      batch_size, weight_decay,
@@ -274,7 +274,7 @@ if __name__ == "__main__":
 
             if output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-                                      'type',
+                                      'units',
                                       "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
                                                                                  learning_rate,
                                                                                  batch_size, weight_decay, dropout_rate,
@@ -310,7 +310,7 @@ if __name__ == "__main__":
                 ('balanced', balanced)
             ])
 
-            clf = neuralNetwork.train(conf, plot_path, gs_params=gs_params, debug=debug, verbose=verbose)
+            clf = neuralNetwork.scores(conf)  # , plot_path, gs_params=gs_params, debug=debug, verbose=verbose)
             final_attributes = []
             if gs_params:
                 clf = clf.best_estimator_
@@ -340,35 +340,70 @@ if __name__ == "__main__":
 
             conf = {
                 'datasets': size,
-                'type': 'all',
+                'type': type,
                 'criterion': criterion,
                 'balanced': balanced
             }
             clf, feature_names = decisionTree.train(conf)
-            joblib.dump(clf, output, compress=1)
-            if plot_path is not None:
-                if plot_path == "":
-                    plot_path = os.path.join('learning', 'tree', 'plots',
-                                             "{}_{}_{}.png".format(int(time.time()), size, ratio))
-                plot(clf._final_estimator, feature_names, config.class_names[0], plot_path)
-    elif job == "predict":
-        if input is None:
-            root = Tkinter.Tk()
-            root.withdraw()
-            input = tkFileDialog.askopenfilename(parent=root, title="Pick a file to predict",
-                                                 defaultextension="mp3",
-                                                 filetypes=[("Mp3 Files", "*.mp3")])
-            root.destroy()
-        else:
-            if os.path.isfile(input):
-                if not input.endswith("mp3"):
-                    print "Sorry, only mp3-files are supported"
-                    sys.exit(2)
+            # joblib.dump(clf, output, compress=1)
+            # if plot_path is not None:
+            #     if plot_path == "":
+            #         plot_path = os.path.join('learning', 'tree', 'plots',
+            #                                  "{}_{}_{}.png".format(int(time.time()), size, ratio))
+            #     plot(clf._final_estimator, feature_names, config.class_names[0], plot_path)
+        elif method == "svm":
+            if size is None:
+                size = -1
+            if loss_type is None:
+                loss_type = "squared_hinge"
+            if output == "":
+                output = os.path.join(os.getcwd(), 'learning', 'svm', 'models',
+                                      "{}_{}_{}.pkl".format(size, loss_type, int(time.time())))
             else:
-                print "Sorry, the path seems to be incorrect..."
-                sys.exit(2)
+                if os.path.isdir(output):
+                    output = os.path.join(output,
+                                          "{}_{}_{}.pkl".format(size, loss_type, int(time.time())))
+                else:
+                    print output + " is not a valid directory"
+                    sys.exit(2)
 
-        trackName, artistName = getTags(input)
+            # balanced = True
+            conf = {
+                'datasets': size,
+                'type': 'all',
+                'loss_type': loss_type,
+                'ratio': ratio,
+                'balanced': balanced
+            }
+            clf = svc.train(conf)
+            joblib.dump(clf, output, compress=1)
+            # if plot_path is not None:
+            #     if plot_path == "":
+            #         plot_path = os.path.join('learning', 'tree', 'plots',
+            #                                  "{}_{}_{}.png".format(int(time.time()), size, ratio))
+            #     plot(clf._final_estimator, feature_names, config.class_names[0], plot_path)
+    elif job == "predict":
+        data = dict()
+        if type != "rest":
+            type = "file"
+            if input is None:
+                root = Tkinter.Tk()
+                root.withdraw()
+                input = tkFileDialog.askopenfilename(parent=root, title="Pick a file to predict",
+                                                     defaultextension="mp3",
+                                                     filetypes=[("Mp3 Files", "*.mp3")])
+                root.destroy()
+            else:
+                if os.path.isfile(input):
+                    if not input.endswith("mp3"):
+                        print "Sorry, only mp3-files are supported"
+                        sys.exit(2)
+                else:
+                    print "Sorry, the path seems to be incorrect..."
+                    sys.exit(2)
+
+            data['trackName'], data['artistName'] = getTags(input)
+            data['id'] = collectData({data['artistName']: [(input, data['trackName'])]}, 1, True)
 
         if pickle_file is None:
             root = Tkinter.Tk()
@@ -385,12 +420,16 @@ if __name__ == "__main__":
             else:
                 print "Sorry, the path seems to be incorrect..."
                 sys.exit(2)
+
+        data['type'] = type
         clf = joblib.load(pickle_file)
 
         if method == "net":
-            neuralNetwork.predict(trackName, artistName, collectData({artistName: [(input, trackName)]}, 1, True), clf)
+            neuralNetwork.predict(data, clf)
         elif method == "tree":
-            decisionTree.predict(trackName, artistName, collectData({artistName: [(input, trackName)]}, 1, True), clf)
+            decisionTree.predict(data, clf)
+        elif method == "svm":
+            svc.predict(data, clf)
     elif job == "selection":
         from utils import features
 
