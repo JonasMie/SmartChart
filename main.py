@@ -114,16 +114,17 @@ if __name__ == "__main__":
     verbose = None
     balanced = False
     criterion = None
+    tree_type = None
     gs_params = dict()
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:t:p:m:o:s:r:d:u:l:n:b:w:e:y:v:c:D:R:S:B",
+        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:t:p:m:o:s:r:d:u:l:n:b:w:e:y:v:c:D:R:S:B:T",
                                    ["help", "job=", "input=", "type=", "pickle=", "method=", "output=",
                                     "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=",
                                     "batchsize=",
                                     "weightdecay=", "errortype=", "debug=", "verbose=", "criterion=", "dropoutrate=",
                                     "learningrule=",
-                                    "n_stable=", "balanced="
+                                    "nstable=", "balanced=", "Tree="
                                     ])
     except:
         usage()
@@ -179,6 +180,8 @@ if __name__ == "__main__":
             n_stable = int(a)
         elif o in ("-B", "--balanced"):
             balanced = bool(a)  # todo
+        elif o in ("-T", "--tree"):
+            tree_type = a
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -310,7 +313,7 @@ if __name__ == "__main__":
                 ('balanced', balanced)
             ])
 
-            clf = neuralNetwork.scores(conf)  # , plot_path, gs_params=gs_params, debug=debug, verbose=verbose)
+            clf = neuralNetwork.train(conf, plot_path, gs_params=gs_params, debug=debug, verbose=verbose)
             final_attributes = []
             if gs_params:
                 clf = clf.best_estimator_
@@ -449,10 +452,24 @@ if __name__ == "__main__":
             output = os.path.join('learning', 'tree', 'features',
                                   "{}_{}_{}_{}.pkl".format(type, size, ratio, int(time.time())))
         joblib.dump(features, output)
-    elif job == "svm":
-        from learning.svm import test
+    elif job == "scores":
+        conf = {
+            'datasets': size,
+            'type': type,
+            'balanced': balanced
+        }
+        if method == "net":
+            neuralNetwork.scores(conf)
+        elif method == "tree":
+            tree_type = "random"  # todo
+            if tree_type is None:
+                print "You must specify the type of tree (-T tree or -T random or -T extra)"
+                sys.exit(2)
+            conf['tree'] = tree_type
+            decisionTree.scores(conf)
+        elif method == "svm":
+            svc.scores(conf)
 
-        test.test()
     elif job == "test":
         if pickle_file is None:
             root = Tkinter.Tk()

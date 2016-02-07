@@ -2,6 +2,8 @@
 import math
 import sqlite3
 from math import sin, cos, pi
+from pprint import pprint
+from time import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -142,6 +144,23 @@ def getData(n_rows, type=None, ratio=1, split=True, balanced=False, complete=Fal
     targets = data['peak_cat']
     data.drop('peak_cat', axis=1, inplace=True)
     return (data, targets, id_col) if return_ids else (data, targets)
+
+
+def gs(grid_search, training_data, training_targets):
+    print("Performing grid search...")
+    print("pipeline:", [name for name, _ in grid_search.estimator.steps])
+    print("parameters:")
+    pprint(grid_search.param_grid)
+    t0 = time()
+    grid_search.fit(training_data, training_targets)
+    print("done in %0.3fs" % (time() - t0))
+    print()
+
+    print("Best score: %0.3f" % grid_search.best_score_)
+    print("Best parameters set:")
+    best_parameters = grid_search.best_estimator_.get_params()
+    for param_name in sorted(grid_search.param_grid.keys()):
+        print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 
 def predict(conf, clf, proba=True, names=True):
