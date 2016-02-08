@@ -33,12 +33,12 @@ def predict(data, clf):
 def scores(conf):
     parameters = {
         'svm__C': np.logspace(-2, 5, 8),
-        'svm_gamma': np.logspace(-9, 2, 12),
+        'svm__gamma': np.logspace(-9, 2, 12),
         'svm__kernel': ['linear', 'rbf']
     }
     training_data, training_targets = learning_utils.getData(conf['datasets'], type=conf['type'], split=True,
                                                              balanced=conf['balanced'], shuffle=True)
     clf = svm.SVC()
-    pipeline = learning_utils.getPipeline(training_data, clf, 'nn')
+    pipeline = learning_utils.getPipeline(training_data, clf, 'svm')
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)
     learning_utils.gs(grid_search, training_data, training_targets)

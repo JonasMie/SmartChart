@@ -249,18 +249,20 @@ def train_custom(conf, plot_path, debug, verbose, gs_params=None, callbacks=defa
 
 def scores(conf):
     parameters = {
-        'nn__n_iter': range(10, 20),
+        'nn__n_iter': range(1, 50),
         'nn__layers': [
             [Layer(type="Softmax", name="output")],
-            [Layer(type="Sigmoid", units=10, name="h0"), Layer(type="Softmax", name="output")],
-            [Layer(type="Sigmoid", units=20, name="h0"), Layer(type="Softmax", name="output")],
-            [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Softmax", name="output")],
-            [Layer(type="Sigmoid", units=75, name="h0"), Layer(type="Softmax", name="output")],
-            [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Sigmoid", units=50, name="h1"),
-             Layer(type="Softmax", name="output")]],
-        'nn__learning_rate': [.01, .05, .1],
+            #     [Layer(type="Sigmoid", units=10, name="h0"), Layer(type="Softmax", name="output")],
+            #     [Layer(type="Sigmoid", units=20, name="h0"), Layer(type="Softmax", name="output")],
+            #     [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Softmax", name="output")],
+            #     [Layer(type="Sigmoid", units=75, name="h0"), Layer(type="Softmax", name="output")],
+            #     [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Sigmoid", units=50, name="h1"),
+            #      Layer(type="Softmax", name="output")]
+        ],
+        'nn__learning_rate': [.001, .01, .05, .1, .2],
         'nn__learning_momentum': [.8, .9],
-        'nn__batch_size': [1, 5, 10],
+        'nn__batch_size': [1, 5, 10, 25, 50],
+        'nn__dropout_rate': [0, .1, .25, .5, .75]
 
     }
     training_data, training_targets = learning_utils.getData(conf['datasets'], type=conf['type'], split=True,

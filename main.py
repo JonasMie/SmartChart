@@ -461,7 +461,7 @@ if __name__ == "__main__":
         if method == "net":
             neuralNetwork.scores(conf)
         elif method == "tree":
-            tree_type = "random"  # todo
+            tree_type = "extra"  # todo
             if tree_type is None:
                 print "You must specify the type of tree (-T tree or -T random or -T extra)"
                 sys.exit(2)
