@@ -252,14 +252,14 @@ def scores(conf):
         'nn__n_iter': range(1, 50),
         'nn__layers': [
             [Layer(type="Softmax", name="output")],
-            #     [Layer(type="Sigmoid", units=10, name="h0"), Layer(type="Softmax", name="output")],
-            #     [Layer(type="Sigmoid", units=20, name="h0"), Layer(type="Softmax", name="output")],
-            #     [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Softmax", name="output")],
-            #     [Layer(type="Sigmoid", units=75, name="h0"), Layer(type="Softmax", name="output")],
-            #     [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Sigmoid", units=50, name="h1"),
-            #      Layer(type="Softmax", name="output")]
+            [Layer(type="Sigmoid", units=10, name="h0"), Layer(type="Softmax", name="output")],
+            [Layer(type="Sigmoid", units=20, name="h0"), Layer(type="Softmax", name="output")],
+            [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Softmax", name="output")],
+            [Layer(type="Sigmoid", units=75, name="h0"), Layer(type="Softmax", name="output")],
+            [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Sigmoid", units=50, name="h1"),
+             Layer(type="Softmax", name="output")]
         ],
-        'nn__learning_rate': [.001, .01, .05, .1, .2],
+        'nn__learning_rate': [.001, .01, .05, .1],
         'nn__learning_momentum': [.8, .9],
         'nn__batch_size': [1, 5, 10, 25, 50],
         'nn__dropout_rate': [0, .1, .25, .5, .75]
@@ -267,7 +267,7 @@ def scores(conf):
     }
     training_data, training_targets = learning_utils.getData(conf['datasets'], type=conf['type'], split=True,
                                                              balanced=conf['balanced'], shuffle=True)
-    clf = getNet()
+    clf = getNet(valid_size=0)
     pipeline = learning_utils.getPipeline(training_data, clf, 'nn')
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)
     learning_utils.gs(grid_search, training_data, training_targets)

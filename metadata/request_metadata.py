@@ -233,9 +233,9 @@ def getMusicbrainzMetadata(track, search_artist=True):
         tries += 1
         track_md.error = True
         print colored("| The Musicbrainz service seems to be not available right now...", 'red')
-    except musicbrainzngs.musicbrainz.ResponseError:  # Todo
+    except musicbrainzngs.musicbrainz.ResponseError as e:
         track_md.error = True
-        print colored("| The Musicbrainz service sent a flawed response back...", 'red')
+        print colored("| {}".format(e), 'red')
 
 
 def getDiscogsTrackMetadata(release, track):
@@ -434,7 +434,7 @@ def getLastfmMetadata(track, search_artist=True):
             getLastfmArtistsMetadata(recording.get_artist())
         getLastfmTrackMetadata(recording)
     except pylast.WSError as e:
-        if e.status != "6": # status 6 => Track not found
+        if e.status != "6":  # status 6 => Track not found
             track_md.error = True
             print colored("| LastFM error...", 'red')
     except pylast.MalformedResponseError:
