@@ -1,7 +1,7 @@
 # coding=utf-8
 import Tkinter
-import getopt
 import tkFileDialog
+from argparse import ArgumentParser
 from collections import OrderedDict
 
 from mutagen.id3 import ID3
@@ -9,6 +9,7 @@ from sklearn.externals import joblib
 
 from MIR.mir import *
 from dataCollector import *
+from learning import learning_utils
 from learning.learning_utils import *
 from learning.nn import neuralNetwork
 from learning.svm import svc
@@ -19,6 +20,53 @@ from utils import normalizeName
 def getTags(path):
     return unicode(ID3(path)["TIT2"].text[0]), unicode(normalizeName(ID3(path)['TPE1'].text[0]))
 
+
+def getOutput(output):
+    if options.output:
+        if options.output == "gen":
+            return os.path.join(os.getcwd(), 'learning', 'nn', 'models',
+                                'units',
+                                "{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(options.type, options.units,
+                                                                        options.n_iter,
+                                                                        options.learning_rate,
+                                                                        options.batch_size, options.weight_decay,
+                                                                        options.dropout_rate,
+                                                                        options.loss_type, int(time())))
+        else:
+            if os.path.isdir(options.output):
+                return os.path.join(options.output,
+                                    "{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(options.type, options.units,
+                                                                            options.n_iter,
+                                                                            options.learning_rate,
+                                                                            options.batch_size,
+                                                                            options.weight_decay,
+                                                                            options.dropout_rate,
+                                                                            options.loss_type,
+                                                                            int(time())))
+            else:
+                print options.output + " is not a valid directory"
+                sys.exit(2)
+    return None
+
+def getPickleFile(pickle_file):
+    if pickle_file is None:
+        root = Tkinter.Tk()
+        root.withdraw()
+        file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
+                                                   defaultextension="pkl",
+                                                   filetypes=[("Pickle Files", "*.pkl")])
+        root.destroy()
+        return joblib.load(file)
+    else:
+        if os.path.isfile(pickle_file):
+            if not input.endswith("pkl"):
+                print "Sorry, only pkl-files are supported"
+                sys.exit(2)
+            else:
+                return joblib.load(pickle_file)
+        else:
+            print "Sorry, the path seems to be incorrect..."
+            sys.exit(2)
 
 def parseDirectory(directoryName, extensions):
     '''
@@ -60,137 +108,77 @@ def parseDirectory(directoryName, extensions):
     return files, artists_found, files_found
 
 
-def usage():
-    print "Available options:\n"
-    print "\tjob:string\t The task to perform {train, predict, selection, collect, fix}"
-    print "\tmethod:string\t The method to perform for the specified job.  {net, tree} for train and predict"
-    print "\ttype:string\t For job 'train': The type of inputs to use ({'all', 'mir', 'md', 'feat_sel', 'rand'}), for job 'selection': The type of feature selection to use ({'tree', 'random' (RandomForestClassifier), 'extra' (ExtraTreesClassifier)})"
-    print "\toutput:string\t The filepath to save the output-file (for train-job the classifier, for selection-job the dictionary of selected features (optional))"
-    print "\tinput:string\t For job 'predict': The filepath of the file to predict. For job 'collect' and 'fix': The folder containing the files to analyze"
-    print "\tpickle:string\t For job 'train': The filepath of the file containing the features selected by the feature selection (optional). For job 'predict': The filepath of the file containing the classifier to use. For job 'collect': To filepath of the file containg the saved filepaths to analyze (optional)"
-    print "\tsize:int\t For job 'train' and 'select': The amount of data to process"
-    print "\tratio:float\t For job 'train': The training- / validation-data ratio. For job 'select': The threshold tu use the x\% best features"
-    print "\tdraw:string\t For job 'train' and 'select': The path to save the plot (optional). If the value is empty, the path is generated"
-    print "\tunits:string\t For job 'train': The number of units for the hidden layers. For multiple hidden units, seperate the values by space"
-    print "\tlearningrate:float\t For job 'train': The learning rate to use for the neural network"
-    print "\tn_iterations:int\t For job 'train': Number of epochs to perform on data"
-    print "\tweightdecay:float\t For job 'train': The weight decay to use"
-    print "\tbatchsize:int\t For job 'train': Amount of batches in one iteration"
-    print "\terrortype:string\t For job 'train': The type of loss-measurement: {'mse', 'mae','mcc'}"
-    print "\tdropoutrate:float\t For job 'train': The ratio of dropout"
-    print "\tlearningrule:string\t For job 'train': The learning-rule to use"
-    print "\tbalanced:bool\t Use the same amount of data for each class (dramatically reduces database!)"
-    print "\tstable:int\t For job 'train': Early stopping of training, if the error remains the same after x datasets"
-    print "\tverbose:boolean\t For job 'train': Verbosity output"
-
-
 if __name__ == "__main__":
 
     total_features = 115
     mir_features = 69
     md_features = 46
-    job = 'collect'
-    method = 'net'
-    size = None
-    output = None
-    ratio = None
-    plot_path = None
-    type = None
-    input = None
-    pickle_file = None
     features = None
-    layers = None
-    units = None
-    unit_range = None
-    learning_rate = None
-    n_iter = None
-    learning_rule = None
-    batch_size = None
-    weight_decay = None
-    dropout_rate = None
-    loss_type = None
-    n_stable = None
-    debug = False
-    verbose = None
-    balanced = False
-    criterion = None
-    tree_type = None
     gs_params = dict()
+    unit_range = None
 
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:j:i:t:p:m:o:s:r:d:u:l:n:b:w:e:y:v:c:D:R:S:B:T",
-                                   ["help", "job=", "input=", "type=", "pickle=", "method=", "output=",
-                                    "size=", "ratio=", "draw=", "units=", "learningrate=", "iterations=",
-                                    "batchsize=",
-                                    "weightdecay=", "errortype=", "debug=", "verbose=", "criterion=", "dropoutrate=",
-                                    "learningrule=",
-                                    "nstable=", "balanced=", "Tree="
-                                    ])
-    except:
-        usage()
-        sys.exit(2)
+    parser = ArgumentParser(description="todo")  # todo
 
-    for o, a in opts:
-        if o == "-v":
-            verbose = True
-        elif o in ("-j", "--job"):
-            job = a
-        elif o in ("-i", "--input"):
-            input = a
-        elif o in ("-t", "--type"):
-            type = a
-        elif o in ("-p", "--pickle"):
-            pickle_file = a
-        elif o in ("-m", "--method"):
-            method = a
-        elif o in ("-o", "--output"):
-            output = a
-        elif o in ("-s", "--size"):
-            size = int(a)
-        elif o in ("-r", "--ratio"):
-            ratio = float(a)
-        elif o in ("-d", "--draw"):
-            plot_path = a
-        elif o in ("-u", "--units"):
-            if "-" in a:
-                unit_range = [int(unit) for unit in a.split("-")]
-            else:
-                units = [int(unit) for unit in a.split()]
-        elif o in ("-l", "--learningrate"):
-            learning_rate = float(a)
-        elif o in ("-n", "--n_iterations"):
-            n_iter = a
-        elif o in ("-w", "--weightdecay"):
-            weight_decay = float(a)
-        elif o in ("-b", "--batchsize"):
-            batch_size = int(a)
-        elif o in ("-e", "--errortype"):
-            loss_type = a
-        elif o in ("-D", "--dropoutrate"):
-            dropout_rate = a
-        elif o in ("-R", "--learningrule"):
-            learning_rule = a
-        elif o in ("-y", "--debug"):
-            debug = a
-        elif o in ("-v", "--verbose"):
-            verbose = a
-        elif o in ("-c", "--criterion"):
-            criterion = a
-        elif o in ("-S", "--stable"):
-            n_stable = int(a)
-        elif o in ("-B", "--balanced"):
-            balanced = bool(a)  # todo
-        elif o in ("-T", "--tree"):
-            tree_type = a
-        elif o in ("-h", "--help"):
-            usage()
-            sys.exit()
-        else:
-            assert False, "unhandled option"
+    parser.add_argument("-j", "--job",
+                        help="Specify what you want to do. Possible values are: train (to train a model), predict "
+                             "(to predict the position of a song), collect (to collect data), scores (to do a grid "
+                             "search and the according best score), selection(to select the most important features), confusion (plot a confusion matrix)")
+    parser.add_argument("-m", "--method",
+                        help="Specify the method to use for the given job. Possible values are: net (neural network), "
+                             "svm, tree")
+    parser.add_argument("-t", "--type", default="all",
+                        help="The type of features to use for the job. Possible values are: all (use all features), md "
+                             "(only metadata features), mir (only audio features), feat_sel (features retrieved by "
+                             "feature selection), random (random amount and types of features)")
 
-    if job == "collect" or job == "fix":
-        if pickle_file is not None:
-            fileList = joblib.load(pickle_file)
+    parser.add_argument("-n", "--n-iter", default=200, type=int,
+                        help="The number of epochs for neural network training. Default is 200")
+    parser.add_argument("-u", "--units", nargs="?", type=int)
+    parser.add_argument("-l", "--learning-rate", default=.01, type=float,
+                        help="The learning rate for neural network training. Default is 0.01")
+    parser.add_argument("-R", "--learning-rule", default="sgd",
+                        help="The learning rule for neural network training. Default is 'sgd' (stochastic gradient "
+                             "descent)")  # todo : possible values
+    parser.add_argument("-b", "--batch-size", default=1, type=int,
+                        help="The batch size for neural network training. Default is 1 (online)")
+    parser.add_argument("-w", "--weight-decay", default=None,
+                        help="The weight decay for neral network training. Default is None")
+    parser.add_argument("-e", "--loss-type", default="mcc",
+                        help="The loss type for neural network training. Default is 'mcc' (mean categorical "
+                             "cross-entropy)")  # todo: possible values
+    parser.add_argument("-D", "--dropout-rate", default=None, type=float,
+                        help="The dropout rate for neural network training. Default is None")
+
+    parser.add_argument("-s", "--size", default=None, type=int,
+                        help="The amount of datasets to use. Default is None (all data is used)")
+
+    parser.add_argument("-o", "--output",  # action="store_true",
+                        help="The output path for the model specifications. Use the keyword 'gen' to use th default "
+                             "path and a generated filename"
+                             "provided, the path is generated.")
+    parser.add_argument("-d", "--plot-path",# action="store_true",
+                        help="The output path for the model plots.  Use the keyword 'gen' to use th default path and a "
+                             "generated filename")
+    parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Enable verbose output")
+    parser.add_argument("-y", "--debug", action="store_true", default=False, help="Enable debugging (neural network)")
+    parser.add_argument("-r", "--ratio", default=.2, type=float,
+                        help="The ratio used for training/validation split. Default is 0.2")
+
+    parser.add_argument("-S", "--n-stable", default=None, type=int,
+                        help="The number of epochs, after which the training is stopped, if the error didn't drop "
+                             "significantly")
+    parser.add_argument("-B", "--balanced", default=False, action="store_true",
+                        help="Set this flag to enable a balanced dataset (same amount of data for each category. "
+                             "Warning: This has serious effects on the size of the whole dataset")
+    parser.add_argument("-p", "--pickle-file",
+                        help="Some jobs require a pickle file to read data from. If path is specified, the "
+                             "file chooser will ask you for it.")
+
+    options = parser.parse_args()
+
+    if options.job == "collect" or options.job == "fix":
+        if options.pickle_file is not None:
+            fileList = joblib.load(options.pickle_file)
             tracks_found = sum(len(y) for y in fileList.itervalues())
         elif input is not None:
             fileList, artists_found, tracks_found = parseDirectory(input, ("mp3"))
@@ -201,151 +189,118 @@ if __name__ == "__main__":
             print dir
             root.destroy()
             fileList, artists_found, tracks_found = parseDirectory(dir, ("mp3"))
-        if job == "collect":
+        if options.job == "collect":
             collectData(fileList, tracks_found)
-        elif job == "fix":
+        elif options.job == "fix":
             fixData(fileList)
-    elif job == "train":
-        if method == "net":
-            if ratio is None:
-                ratio = .2
-            if learning_rate is None:
-                learning_rate = .01
-            if learning_rule is None:
-                learning_rule = 'sgd'
-            if batch_size is None:
-                batch_size = 1  # online
-            if weight_decay is None:
-                weight_decay = None
-            if loss_type is None:
-                loss_type = 'mcc'
-            if n_iter is None:
-                n_iter = 70
-            else:
-                n_iter = utils.getElements(n_iter)
-                gs_params = utils.addToGS(gs_params, 'neural_network__n_iter', n_iter)
-
-            if type:
-                type = utils.getElements(type)
-                gs_params = utils.addToGS(gs_params, 'type', type)
-
-            if type != 'all' and isinstance(type, basestring):
-                if type == 'mir':
-                    i0 = mir_features
-                elif type == 'md':
-                    i0 = md_features
-                elif type == 'feat_sel':
-                    if pickle_file:
+    elif options.job == "train":
+        if options.method == "net":
+            if options.type != 'all' and isinstance(options.type, basestring):
+                if options.type == 'mir':
+                    i0 = options.mir_features
+                elif options.type == 'md':
+                    i0 = options.md_features
+                elif options.type == 'feat_sel':
+                    if options.pickle_file:
                         features = None
                         # get feature list
-                        features = joblib.load(pickle_file)
+                        features = joblib.load(options.pickle_file)
                         i0 = len(features)
                     else:
                         print "Please specify  the location of the pickle file (-p) containing the list of features"
                         sys.exit(2)
-                elif type == 'rand':
+                elif options.type == 'rand':
                     from utils import features
                     import random
 
-                    features = random.sample(np.hstack(features.values()), random.randint(1, total_features))
+                    features = random.sample(np.hstack(features.values()), random.randint(1, options.total_features))
                     i0 = len(features)
             else:
                 i0 = total_features
-            if units is None and unit_range is None:
+            if options.units is None and unit_range is None:
                 units = [int(math.ceil((i0 + 7) / 2))]
 
-            if plot_path is not None:
-                if plot_path == "":
-                    plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
-                                             'units',
-                                             "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
-                                                                                     learning_rate,
-                                                                                     batch_size, weight_decay,
-                                                                                     dropout_rate,
-                                                                                     loss_type, int(time.time())))
+            if options.plot_path:
+                if options.plot_path == 'gen':
+                    options.plot_path = os.path.join(os.getcwd(), 'learning', 'nn', 'plots',
+                                                     'units',
+                                                     "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(options.type,
+                                                                                             options.units,
+                                                                                             options.n_iter,
+                                                                                             options.learning_rate,
+                                                                                             options.batch_size,
+                                                                                             options.weight_decay,
+                                                                                             options.dropout_rate,
+                                                                                             options.loss_type,
+                                                                                             int(time())))
                 else:
-                    if os.path.isdir(plot_path):
-                        output = os.path.join(plot_path,
-                                              "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, units, n_iter,
-                                                                                      learning_rate,
-                                                                                      batch_size, weight_decay,
-                                                                                      dropout_rate, loss_type,
-                                                                                      int(time.time())))
+                    if os.path.isdir(options.plot_path):
+                        options.plot_path = os.path.join(options.plot_path,
+                                                         "{}_{}_{}_{}_{}_{}_{}_{}_{}.png".format(type, options.units,
+                                                                                                 options.n_iter,
+                                                                                                 options.learning_rate,
+                                                                                                 options.batch_size,
+                                                                                                 options.weight_decay,
+                                                                                                 options.dropout_rate,
+                                                                                                 options.loss_type,
+                                                                                                 int(time())))
                     else:
-                        print plot_path + " is not a valid directory"
+                        print options.plot_path + " is not a valid directory"
                         sys.exit(2)
 
-            if output == "":
-                output = os.path.join(os.getcwd(), 'learning', 'nn', 'models',
-                                      'units',
-                                      "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
-                                                                                 learning_rate,
-                                                                                 batch_size, weight_decay, dropout_rate,
-                                                                                 loss_type, int(time.time())))
-            else:
-                if os.path.isdir(output):
-                    output = os.path.join(output,
-                                          "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl".format(type, type, units, n_iter,
-                                                                                     learning_rate,
-                                                                                     batch_size, weight_decay,
-                                                                                     dropout_rate, loss_type,
-                                                                                     int(time.time())))
-                else:
-                    print output + " is not a valid directory"
-                    sys.exit(2)
-
+            parser.output = getOutput(options.output)
             conf = OrderedDict([
-                ('datasets', size),
-                ('type', type),
-                ('epochs', n_iter),
-                ('ratio', ratio),
-                ('units', units),
+                ('datasets', options.size),
+                ('type', options.type),
+                ('epochs', options.n_iter),
+                ('ratio', options.ratio),
+                ('units', options.units),
                 ('unit_range', unit_range),
                 ('n_input', 0),
-                ('learning_rate', learning_rate),
+                ('learning_rate', options.learning_rate),
                 ('features', features),
-                ('learning_rule', learning_rule),
-                ('batch_size', batch_size),
-                ('loss_type', loss_type),
-                ('weight_decay', weight_decay),
-                ('dropout_rate', dropout_rate),
-                ('n_stable', n_stable),
-                ('balanced', balanced)
+                ('learning_rule', options.learning_rule),
+                ('batch_size', options.batch_size),
+                ('loss_type', options.loss_type),
+                ('weight_decay', options.weight_decay),
+                ('dropout_rate', options.dropout_rate),
+                ('n_stable', options.n_stable),
+                ('balanced', options.balanced)
             ])
-
-            clf = neuralNetwork.train(conf, plot_path, gs_params=gs_params, debug=debug, verbose=verbose)
+            clf = neuralNetwork.train(conf, options.plot_path, gs_params=gs_params, debug=options.debug,
+                                      verbose=options.verbose)
             final_attributes = []
-            if gs_params:
+            if options.gs_params:
                 clf = clf.best_estimator_
             for l in clf._final_estimator.get_parameters():
                 final_attributes.append({'layer': l.layer, 'weights': l.weights, 'biases': l.biases})
             clf.final_attributes = final_attributes
-            joblib.dump(clf, output, compress=1)
-        elif method == "tree":
+            joblib.dump(clf, parser.output, compress=1)
+        elif options.method == "tree":
             if size is None:
                 size = -1
             if type is None:
                 type = "all"
-            if criterion is None:
+            if options.criterion is None:
                 criterion = "gini"
-            if ratio is None:
+            if options.ratio is None:
                 ratio = 1
-            if output == "":
+            if options.output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'tree', 'models',
                                       "{}_{}_{}.pkl".format(type, criterion, int(time.time())))
             else:
-                if os.path.isdir(output):
-                    output = os.path.join(output,
+                if os.path.isdir(options.output):
+                    output = os.path.join(options.output,
                                           "{}_{}_{}.pkl".format(type, criterion, int(time.time())))
                 else:
-                    print output + " is not a valid directory"
+                    print options.output + " is not a valid directory"
                     sys.exit(2)
 
             conf = {
                 'datasets': size,
                 'type': type,
                 'criterion': criterion,
-                'balanced': balanced
+                'balanced': options.balanced
             }
             clf, feature_names = decisionTree.train(conf)
             # joblib.dump(clf, output, compress=1)
@@ -354,20 +309,20 @@ if __name__ == "__main__":
             #         plot_path = os.path.join('learning', 'tree', 'plots',
             #                                  "{}_{}_{}.png".format(int(time.time()), size, ratio))
             #     plot(clf._final_estimator, feature_names, config.class_names[0], plot_path)
-        elif method == "svm":
+        elif options.method == "svm":
             if size is None:
                 size = -1
-            if loss_type is None:
+            if options.loss_type is None:
                 loss_type = "squared_hinge"
-            if output == "":
+            if options.output == "":
                 output = os.path.join(os.getcwd(), 'learning', 'svm', 'models',
                                       "{}_{}_{}.pkl".format(size, loss_type, int(time.time())))
             else:
-                if os.path.isdir(output):
-                    output = os.path.join(output,
+                if os.path.isdir(options.output):
+                    output = os.path.join(options.output,
                                           "{}_{}_{}.pkl".format(size, loss_type, int(time.time())))
                 else:
-                    print output + " is not a valid directory"
+                    print options.output + " is not a valid directory"
                     sys.exit(2)
 
             # balanced = True
@@ -375,8 +330,8 @@ if __name__ == "__main__":
                 'datasets': size,
                 'type': 'all',
                 'loss_type': loss_type,
-                'ratio': ratio,
-                'balanced': balanced
+                'ratio': options.ratio,
+                'balanced': options.balanced
             }
             clf = svc.train(conf)
             joblib.dump(clf, output, compress=1)
@@ -385,7 +340,7 @@ if __name__ == "__main__":
             #         plot_path = os.path.join('learning', 'tree', 'plots',
             #                                  "{}_{}_{}.png".format(int(time.time()), size, ratio))
             #     plot(clf._final_estimator, feature_names, config.class_names[0], plot_path)
-    elif job == "predict":
+    elif options.job == "predict":
         data = dict()
         if type != "rest":
             type = "file"
@@ -408,94 +363,83 @@ if __name__ == "__main__":
             data['trackName'], data['artistName'] = getTags(input)
             data['id'] = collectData({data['artistName']: [(input, data['trackName'])]}, 1, True)
 
-        if pickle_file is None:
-            root = Tkinter.Tk()
-            root.withdraw()
-            pickle_file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
-                                                       defaultextension="pkl",
-                                                       filetypes=[("Pickle Files", "*.pkl")])
-            root.destroy()
-        else:
-            if os.path.isfile(pickle_file):
-                if not input.endswith("pkl"):
-                    print "Sorry, only pkl-files are supported"
-                    sys.exit(2)
-            else:
-                print "Sorry, the path seems to be incorrect..."
-                sys.exit(2)
+        clf = getPickleFile(options.pickle_file)
 
         data['type'] = type
-        clf = joblib.load(pickle_file)
 
-        if method == "net":
+        if options.method == "net":
             neuralNetwork.predict(data, clf)
-        elif method == "tree":
+        elif options.method == "tree":
             decisionTree.predict(data, clf)
-        elif method == "svm":
+        elif options.method == "svm":
             svc.predict(data, clf)
-    elif job == "selection":
+    elif options.job == "selection":
         from utils import features
 
         if type is None or type not in ("tree", "random", "extra"):
             print "Please specify the kind of feature selection model ('-t tree' or '-t random' or '-t extra')"
             sys.exit(2)
-        if n_iter is None:
+        if options.n_iter is None:
             n_iter = 10
-        if ratio is None:
+        if options.ratio is None:
             ratio = .1
         X, y = getData(size, balanced=False)
         feature_names = X.columns
         X = impute(X)
-        features = decisionTree.tree_feat_sel(X, y, feature_names, type, trees=n_iter, threshold=ratio)
+        features = decisionTree.tree_feat_sel(X, y, feature_names, type, trees=options.n_iter, threshold=options.ratio)
         print features
-        if output is None:
+        if options.output is None:
             output = os.path.join('learning', 'tree', 'features',
                                   "{}_{}_{}_{}.pkl".format(type, size, ratio, int(time.time())))
         joblib.dump(features, output)
-    elif job == "scores":
+    elif options.job == "scores":
         conf = {
-            'datasets': size,
-            'type': type,
-            'balanced': balanced
+            'datasets': options.size,
+            'type': options.type,
+            'balanced': options.balanced
         }
-        if method == "net":
-            neuralNetwork.scores(conf)
-        elif method == "tree":
+        if options.method == "net":
+            grid_search, training_data, training_targets = neuralNetwork.scores(conf)
+
+            ##wtf ??
+            if __name__ == '__main__':
+                print("Performing grid search...")
+                print("pipeline:", [name for name, _ in grid_search.estimator.steps])
+                print("parameters:")
+                pprint(grid_search.param_grid)
+                t0 = time()
+                grid_search.fit(training_data, training_targets)
+                print("done in %0.3fs" % (time() - t0))
+                print()
+
+                print("Best score: %0.3f" % grid_search.best_score_)
+                print("Best parameters set:")
+                best_parameters = grid_search.best_estimator_.get_params()
+                for param_name in sorted(grid_search.param_grid.keys()):
+                    print("\t%s: %r" % (param_name, best_parameters[param_name]))
+        elif options.method == "tree":
             tree_type = "extra"  # todo
             if tree_type is None:
                 print "You must specify the type of tree (-T tree or -T random or -T extra)"
                 sys.exit(2)
             conf['tree'] = tree_type
             decisionTree.scores(conf)
-        elif method == "svm":
+        elif options.method == "svm":
             svc.scores(conf)
-
-    elif job == "test":
-        if pickle_file is None:
-            root = Tkinter.Tk()
-            root.withdraw()
-            pickle_file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
-                                                       defaultextension="pkl",
-                                                       filetypes=[("Pickle Files", "*.pkl")])
-            root.destroy()
-        else:
-            if os.path.isfile(pickle_file):
-                if not input.endswith("pkl"):
-                    print "Sorry, only pkl-files are supported"
-                    sys.exit(2)
-            else:
-                print "Sorry, the path seems to be incorrect..."
-                sys.exit(2)
-        clf = joblib.load(pickle_file)
-
-    elif job == "grid_search":
+    elif options.job == "grid_search":
         conf = OrderedDict([
             ('datasets', size),
             ('epochs', (10, 20))
         ])
-        clf = neuralNetwork.train(conf, plot_path, debug=debug, verbose=verbose)
+        clf = neuralNetwork.train(conf, options.plot_path, debug=options.debug, verbose=options.verbose)
         final_attributes = []
         for l in clf._final_estimator.get_parameters():
             final_attributes.append({'layer': l.layer, 'weights': l.weights, 'biases': l.biases})
         clf.final_attributes = final_attributes
-        joblib.dump(clf, output, compress=1)
+        joblib.dump(clf, options.output, compress=1)
+    elif options.job == "confusion":
+        clf = getPickleFile(options.pickle_file)
+        learning_utils.plot_confusion(clf)
+    else:
+        print ("No job provided.")
+        parser.print_help()

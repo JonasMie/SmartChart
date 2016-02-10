@@ -81,7 +81,7 @@ default_callbacks = {
 
 def getNet(units=[61], learning_rate=0.01, n_iter=16, learning_rule='sgd', batch_size=1, weight_decay=None,
            dropout_rate=None, loss_type='mcc', n_stable=10,
-           debug=False, verbose=False, callbacks=None, valid_size=.2):
+           debug=False, verbose=False, callbacks=None, valid_set=None, valid_size=.2):
     layers = [Layer(type="Sigmoid", units=u) for u in units]
     layers.append(Layer(type="Softmax"))
     return Classifier(
@@ -97,20 +97,25 @@ def getNet(units=[61], learning_rate=0.01, n_iter=16, learning_rule='sgd', batch
         debug=debug,
         verbose=verbose,
         callback=callbacks,
-        # valid_set=valid_set
+        valid_set=valid_set,
         valid_size=valid_size,
         regularize='L2'
     )
 
 
-def getData(size, ratio, features, balanced, type):
-    complete_data = learning_utils.getData(size, split=False, balanced=balanced, type=type)
+def getData(size, ratio, features, balanced, type, return_ids):
+    complete_data = learning_utils.getData(size, split=False, balanced=balanced, type=type, return_ids=return_ids)
 
     if features is not None and len(features) > 0 and type != "md" and type != "mir":
         features.append('peak_cat')
         complete_data = complete_data[features]
     threshold = int(complete_data.shape[0] * (1 - ratio))
 
+    if return_ids:
+        ids = complete_data['id']
+        complete_data.drop('id', axis=1, inplace=True)
+    else:
+        ids = None
     training_data = complete_data[:threshold]
     test_data = complete_data[threshold:]
 
@@ -120,7 +125,7 @@ def getData(size, ratio, features, balanced, type):
     test_targets = test_data['peak_cat']
     test_data.drop('peak_cat', axis=1, inplace=True)
 
-    return training_data, training_targets, test_data, test_targets
+    return training_data, training_targets, test_data, test_targets, ids
 
 
 def train(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_callbacks):
@@ -132,8 +137,10 @@ def train(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_cal
     else:
         train_errors = np.zeros(conf['epochs'])
         valid_errors = np.zeros(conf['epochs'])
-    training_data, training_targets, valid_data, valid_targets = getData(conf['datasets'], 0, conf['features'],
-                                                                         balanced=conf['balanced'], type=conf['type'])
+    training_data, training_targets, valid_data, valid_targets, ids = getData(conf['datasets'], conf['ratio'],
+                                                                              conf['features'],
+                                                                              balanced=conf['balanced'],
+                                                                              type=conf['type'], return_ids=True)
 
     # if there is not enough data available
     conf['datasets'] = training_data.shape[0]
@@ -183,16 +190,13 @@ def train(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_cal
                      conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
                      conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose,
                      callbacks=callbacks,
-                     # valid_set=(valid_data, valid_targets)
-                     valid_size=conf['ratio']
+                     valid_set=(np.array(valid_data), valid_targets),
+                     valid_size=None  # TODO conf['ratio']
                      )
         pipeline = learning_utils.getPipeline(training_data, net, 'neural_network')
-
-        if gs_params:
-            gs = GridSearchCV(pipeline, param_grid=gs_params)
-            return gs.fit(training_data, training_targets)
-
-        return pipeline.fit(training_data, training_targets)
+        model = pipeline.fit(training_data, training_targets)
+        model.ids = ids
+        return model
 
 
 def predict(trackName, artistName, track_id, clf):
@@ -258,7 +262,7 @@ def scores(conf):
             [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Softmax", name="output")],
             [Layer(type="Sigmoid", units=75, name="h0"), Layer(type="Softmax", name="output")],
             # [Layer(type="Sigmoid", units=50, name="h0"), Layer(type="Sigmoid", units=50, name="h1"),
-             # Layer(type="Softmax", name="output")]
+            # Layer(type="Softmax", name="output")]
         ],
         'nn__learning_rate': [.001, .01, .05],
         # 'nn__learning_momentum': [.8, .9],
@@ -270,6 +274,6 @@ def scores(conf):
                                                              balanced=conf['balanced'], shuffle=True)
     clf = getNet(valid_size=0)
     pipeline = learning_utils.getPipeline(training_data, clf, 'nn')
-    grid_search = GridSearchCV(pipeline, parameters,verbose=10)
+    grid_search = GridSearchCV(pipeline, parameters, verbose=10)
     return grid_search, training_data, training_targets
     # learning_utils.gs(grid_search, training_data, training_targets)

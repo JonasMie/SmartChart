@@ -135,15 +135,15 @@ def getData(n_rows, type=None, ratio=1, split=True, balanced=False, complete=Fal
     if shuffle:
         data.reindex(np.random.permutation(data.index))
 
-    if return_ids:
-        id_col = data['id']
-        data.drop('id', axis=1, inplace=True)
+    # if return_ids:
+    #     id_col = data['id']
+    #     data.drop('id', axis=1, inplace=True)
 
     if not split:
-        return (data, id_col) if return_ids else data
+        return data
     targets = data['peak_cat']
     data.drop('peak_cat', axis=1, inplace=True)
-    return (data, targets, id_col) if return_ids else (data, targets)
+    return data, targets
 
 
 def gs(grid_search, training_data, training_targets):
@@ -440,3 +440,6 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
     plt.axis('equal')
     plt.show()
     # Plot the feature importances of the forest
+
+def plot_confusion(clf):
+    print clf
