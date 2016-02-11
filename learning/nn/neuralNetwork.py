@@ -40,8 +40,7 @@ def on_train_finish(**variables):
                                   title="training and validation error", suptitle=None, conf=config, additionals=[
                 [best_train_i, variables['best_train_error']], [best_valid_i, variables['best_valid_error']]],
                                   path=plot)
-    from sklearn.externals import joblib
-    joblib.dump(valid_errors, 'test.pkl', compress=1)
+    # joblib.dump(valid_errors, 'test.pkl', compress=1) todo
     if config['unit_range']:
         unit_iter_train_error.append(variables['avg_train_error'])
         unit_iter_valid_error.append(variables['avg_valid_error'])
@@ -190,8 +189,8 @@ def train(conf, plot_path, debug, verbose, gs_params=None, callbacks=default_cal
                      conf['batch_size'], conf['weight_decay'], conf['dropout_rate'],
                      conf['loss_type'], n_stable=conf['n_stable'], debug=debug, verbose=verbose,
                      callbacks=callbacks,
-                     valid_set=(np.array(valid_data), valid_targets),
-                     valid_size=None  # TODO conf['ratio']
+                     # valid_set=(np.array(valid_data), valid_targets),
+                     valid_size=conf['ratio']
                      )
         pipeline = learning_utils.getPipeline(training_data, net, 'neural_network')
         model = pipeline.fit(training_data, training_targets)
@@ -277,3 +276,34 @@ def scores(conf):
     grid_search = GridSearchCV(pipeline, parameters, verbose=10)
     return grid_search, training_data, training_targets
     # learning_utils.gs(grid_search, training_data, training_targets)
+
+
+def hist(iterations, conf):
+    global train_errors, valid_errors, best_train_i, config
+    config = conf
+    best_valid = list()
+    best_train = list()
+    best_epoch_slp = np.zeros(conf['epochs'])
+    best_epoch_mlp = np.zeros(conf['epochs'])
+    for i in range(conf['epochs']):
+        training_data, training_targets, valid_data, valid_target, ids = getData(size=conf['datasets'],
+                                                                                 ratio=conf['ratio'],
+                                                                                 features=conf['features'],
+                                                                                 balanced=conf['balanced'],
+                                                                                 type=conf['type'], return_ids=False)
+
+        train_errors = np.zeros(conf['epochs'])
+        valid_errors = np.zeros(conf['epochs'])
+        slp = getNet(units=[], n_iter=conf['epochs'], callbacks=default_callbacks)
+        pipeline_slp = learning_utils.getPipeline(training_data, slp, 'neural_network')
+        model_slp = pipeline_slp.fit(training_data, training_targets)
+        best_epoch_slp[best_train_i - 1] += 1
+
+        train_errors = np.zeros(conf['epochs'])
+        valid_errors = np.zeros(conf['epochs'])
+        mlp = getNet(units=[61], n_iter=conf['epochs'], callbacks=default_callbacks)
+        pipeline_mlp = learning_utils.getPipeline(training_data, mlp, 'neural_network')
+        model_mlp = pipeline_mlp.fit(training_data, training_targets)
+        best_epoch_mlp[best_train_i - 1] += 1
+
+    learning_utils.plot_hist(best_epoch_slp, best_epoch_mlp)

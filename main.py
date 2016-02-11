@@ -48,13 +48,14 @@ def getOutput(output):
                 sys.exit(2)
     return None
 
+
 def getPickleFile(pickle_file):
     if pickle_file is None:
         root = Tkinter.Tk()
         root.withdraw()
         file = tkFileDialog.askopenfilename(parent=root, title="Pick a file containing the classifier",
-                                                   defaultextension="pkl",
-                                                   filetypes=[("Pickle Files", "*.pkl")])
+                                            defaultextension="pkl",
+                                            filetypes=[("Pickle Files", "*.pkl")])
         root.destroy()
         return joblib.load(file)
     else:
@@ -67,6 +68,7 @@ def getPickleFile(pickle_file):
         else:
             print "Sorry, the path seems to be incorrect..."
             sys.exit(2)
+
 
 def parseDirectory(directoryName, extensions):
     '''
@@ -156,7 +158,7 @@ if __name__ == "__main__":
                         help="The output path for the model specifications. Use the keyword 'gen' to use th default "
                              "path and a generated filename"
                              "provided, the path is generated.")
-    parser.add_argument("-d", "--plot-path",# action="store_true",
+    parser.add_argument("-d", "--plot-path",  # action="store_true",
                         help="The output path for the model plots.  Use the keyword 'gen' to use th default path and a "
                              "generated filename")
     parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Enable verbose output")
@@ -270,8 +272,8 @@ if __name__ == "__main__":
             clf = neuralNetwork.train(conf, options.plot_path, gs_params=gs_params, debug=options.debug,
                                       verbose=options.verbose)
             final_attributes = []
-            if options.gs_params:
-                clf = clf.best_estimator_
+            # if options.gs_params:
+            #     clf = clf.best_estimator_
             for l in clf._final_estimator.get_parameters():
                 final_attributes.append({'layer': l.layer, 'weights': l.weights, 'biases': l.biases})
             clf.final_attributes = final_attributes
@@ -439,7 +441,18 @@ if __name__ == "__main__":
         joblib.dump(clf, options.output, compress=1)
     elif options.job == "confusion":
         clf = getPickleFile(options.pickle_file)
-        learning_utils.plot_confusion(clf)
+        learning_utils.plot_confusion(clf, balanced=options.balanced)
+    elif options.job == "histogram":
+        conf = {
+            'datasets': options.size,
+            'type': options.type,
+            'balanced': options.balanced,
+            'ratio': .2,
+            'features': None,
+            'epochs': options.n_iter,
+            'unit_range': None
+        }
+        neuralNetwork.hist(2, conf)
     else:
         print ("No job provided.")
         parser.print_help()

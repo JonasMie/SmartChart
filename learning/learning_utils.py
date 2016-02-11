@@ -12,6 +12,7 @@ import pydot
 from matplotlib import cm
 from sklearn import tree
 from sklearn.externals.six import StringIO
+from sklearn.metrics import confusion_matrix
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import Imputer, StandardScaler, MinMaxScaler, FunctionTransformer
 from sklearn.utils import check_array
@@ -441,5 +442,31 @@ def plot_pie(name, trees, importances, indices, ordered_features, threshold, x, 
     plt.show()
     # Plot the feature importances of the forest
 
-def plot_confusion(clf):
-    print clf
+def plot_confusion(clf, balanced):
+    try:
+        ids=clf.ids
+    except:
+        pass #todo
+
+    X,y_target = getData(n_rows=None, type="all", ratio=1, split=True, balanced=balanced, complete=False, shuffle=True, ids=ids, return_ids=False)
+    y_pred = clf.predict(X)
+    cm = confusion_matrix(y_target, y_pred)
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    plt.imshow(cm_normalized, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title("Confusion matrix for classifier ...")
+    plt.colorbar()
+    plt.xticks(range(7))
+    plt.xticks(range(7))
+    plt.tight_layout()
+    plt.ylabel("Target class")
+    plt.ylabel("Predicted class")
+    plt.show()
+
+def plot_hist(data1, data2):
+    plt.hist(data1, bins=len(data1), histtype='stepfilled', color='b', label='slp')
+    plt.hist(data2, bins=len(data2), histtype='stepfilled', color='r', label='mlp', alpha=.5)
+    plt.title("Distribution of the minimum amount of epochs to reach the validation-error minimum")
+    plt.xlabel("Epoch")
+    plt.ylabel("Frequencies")
+    plt.legend()
+    plt.show()
